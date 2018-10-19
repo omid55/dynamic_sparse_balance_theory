@@ -62,7 +62,7 @@ def graph_equals(g1: nx.DiGraph, g2: nx.DiGraph) -> bool:
 
         g2: Second graph to be compared.
 
-    Output:
+    Returns:
         Boolean whether g1 equals g2 or not.
 
     Raises:

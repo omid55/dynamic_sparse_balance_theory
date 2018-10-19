@@ -10,11 +10,14 @@ from __future__ import absolute_import
 
 from typing import Dict
 from typing import List
-from typing import Tuple
 import numpy as np
 import pandas as pd
 import datetime
 import networkx as nx
+import math
+
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 import utils
 
@@ -22,12 +25,12 @@ import utils
 def extract_graphs(
         edge_list: pd.DataFrame,
         weeks: int = 4,
-        accumulated: bool = False) -> List[nx.DiGraph]:
+        accumulative: bool = False) -> List[nx.DiGraph]:
     """Extracts a list of graphs in each period of time.
 
     It extracts graph structure for periods with the duration of given number
     of weeks. Separated networks are created from the edges only happened
-    in that period. However, accumulated ones are created from all edges
+    in that period. However, accumulative ones are created from all edges
     since the beginnig until that period.
 
     Args:
@@ -35,10 +38,10 @@ def extract_graphs(
 
         weeks: The number of weeks for the desired period length.
 
-        accumulated: Whether we need separated networks or accumulated ones.
+        accumulative: Whether we need separated networks or accumulative ones.
 
     Returns:
-        List of directed graphs created based on accumulated or separated.
+        List of directed graphs created based on accumulative or separated.
 
     Raises:
         ValueError: if it does not contain required columns.
@@ -55,13 +58,13 @@ def extract_graphs(
         period_start = (
             start_date + period_index * datetime.timedelta(weeks * 7))
         period_end = period_start + datetime.timedelta(weeks * 7)
-        if not accumulated:
+        if not accumulative:
             # Chooses the edges only for this period.
             selected_edges = edge_list[
                 (edge_list['edge_date'] >= period_start) &
                 (edge_list['edge_date'] < period_end)]
         else:
-            # Chooses the edges until this period (accumulated).
+            # Chooses the edges until this period (accumulative).
             selected_edges = edge_list[edge_list['edge_date'] < period_end]
         dgraph = nx.from_pandas_edgelist(
             selected_edges,
@@ -217,15 +220,19 @@ def count_different_signed_edges(dgraph):
 
 def compute_edge_balance(
         dgraph: nx.DiGraph,
-        no_isomorph_cycles=False) -> Dict[Tuple, Dict[str, int]]:
+        no_isomorph_cycles=False) -> Dict[tuple, Dict[str, int]]:
     """Computes edge balance based on Van De Rijt idea.
 
-    Args:
+    With no_isomorph_cycles=True, we can get the number of cycles and edge
+        is not meaningful. However, with no_isomorph_cycles=False, for every
+        edge which is involved one of cycle3, there will be information in
+        the dictionary.
 
+    Args:
         dgraph: Directed weighted graph to apply edge balance.
 
         no_isomorph_cycles: If true, it does not count
-            the isomorph triads.
+            the isomorph cycle3.
 
     Returns:
         Dictionary of edges mapped to the number of balanced
@@ -235,7 +242,7 @@ def compute_edge_balance(
         None
     """
     edge_balance = {}
-    triads = set()
+    cycle3s = set()
 
     for edge in dgraph.edges():
         triad_count = 0
@@ -248,33 +255,22 @@ def compute_edge_balance(
         for node in nodes:
             if dgraph.has_edge(
                     edge[1], node) and dgraph.has_edge(node, edge[0]):
-                if no_isomorph_cycles:
-                    triad_str = ','.join(
-                        (str(edge[1]), str(node), str(edge[0])))
-                    if triad_str not in triads:
+                triad_str = ','.join((str(edge[1]), str(node), str(edge[0])))
+                if not no_isomorph_cycles or (
+                        no_isomorph_cycles and (triad_str not in cycle3s)):
+                    if triad_str not in cycle3s:
                         triad_isomorph1_str = ','.join(
                             (str(edge[0]), str(edge[1]), str(node)))
                         triad_isomorph2_str = ','.join(
                             (str(node), str(edge[0]), str(edge[1])))
-                        triads = triads.union(
+                        cycle3s = cycle3s.union(
                             set([triad_str,
                                  triad_isomorph1_str,
                                  triad_isomorph2_str]))
 
-                        triad_count += 1
-                        xik = dgraph.get_edge_data(edge[1], node)['weight']
-                        xkj = dgraph.get_edge_data(node, edge[0])['weight']
-
-                        weight_sum += np.sign(xik) * np.sign(xkj)
-
-                        weight_distance += abs(xij - (xik * xkj))
-                        if np.sign(xij * xik * xkj) > 0:
-                            balanced_count += 1
-                else:
                     triad_count += 1
                     xik = dgraph.get_edge_data(edge[1], node)['weight']
                     xkj = dgraph.get_edge_data(node, edge[0])['weight']
-                    xij = dgraph.get_edge_data(edge[0], edge[1])['weight']
 
                     weight_sum += np.sign(xik) * np.sign(xkj)
 
@@ -290,3 +286,118 @@ def compute_edge_balance(
                 'weight_distance': weight_distance,
                 'as_expected_sign': as_expected_sign}
     return edge_balance
+
+
+def plot_evolving_graphs(
+        dgraphs: List[nx.DiGraph],
+        titles: List[str] = None,
+        aggregated_dgraph: nx.DiGraph = None) -> None:
+    """Plots list of given graphs.
+
+    If aggregated_dgraph is None, it computes it by combining
+        all graphs together.
+
+    Args:
+        dgraphs: List of given evolving graphs.
+
+        titles: List of title content if needed.
+
+        aggregated_dgraph: One aggregated graph.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    n = 3
+    m = np.ceil(len(dgraphs) / n)
+    sns.set(rc={'figure.figsize': (6*n, 6*m)})
+    if not aggregated_dgraph:
+        aggregated_dgraph = nx.compose_all(dgraphs)
+    all_positions = nx.layout.spring_layout(aggregated_dgraph)
+    for index, dgraph in enumerate(dgraphs):
+        plt.subplot(m, n, index + 1)
+        nx.draw(dgraph, pos=all_positions, with_labels=True)
+        if titles:
+            title_name = titles[index]
+        else:
+            title_name = 'Period {}'.format(index + 1)
+        plt.title('{}\n{} nodes, {} edges'.format(
+            title_name, len(dgraph.nodes()), len(dgraph.edges())))
+
+
+def compute_fairness_goodness(
+        dgraph: nx.DiGraph,
+        weight_range: float = 20,
+        max_iteration: int = 100,
+        verbose: bool = True) -> Dict[str, Dict[int, float]]:
+    """Computes fairness and goodness per node in a weighted signed graph.
+
+    Args:
+        dgraph: Weighted signed graph with weights fall in [-l, l].
+
+        weight_range: Range of weights, for above graph is 2*l.
+
+        max_iteration: The maximum number of iterations if not converge.
+
+        verbose: If we want to print information while computing.
+
+    Returns:
+        Dictionary of fairness and goodness as dictionary of values for nodes.
+
+    Raises:
+        None.
+    """
+    # Initializes fairness of all nodes to 1 and goodness of all to 0.
+    fairness = {}
+    goodness = {}
+    nodes = dgraph.nodes()
+    for node in nodes:
+        fairness[node] = 1
+        in_degree = dgraph.in_degree(node)
+        if in_degree:
+            goodness[node] = dgraph.in_degree(
+                node, weight='weight') / in_degree
+        else:
+            goodness[node] = 0
+
+    nodes = dgraph.nodes()
+    for iteration in range(max_iteration):
+        fairness_diff = 0
+        goodness_diff = 0
+
+        if verbose:
+            print('-----------------')
+            print("Iteration number", iteration)
+            print('Updating goodness')
+        for node in nodes:
+            inedges = dgraph.in_edges(node, data='weight')
+            g = 0
+            for edge in inedges:
+                g += fairness[edge[0]]*edge[2]
+            in_degree = len(inedges)
+            if in_degree:
+                goodness_diff += abs(g/in_degree - goodness[node])
+                goodness[node] = g/in_degree
+
+        if verbose:
+            print('Updating fairness')
+        for node in nodes:
+            outedges = dgraph.out_edges(node, data='weight')
+            f = 0
+            for edge in outedges:
+                f += 1.0 - abs(edge[2] - goodness[edge[1]])/weight_range
+            out_degree = len(outedges)
+            if out_degree:
+                fairness_diff += abs(f/out_degree - fairness[node])
+                fairness[node] = f/out_degree
+
+        if verbose:
+            print('Differences in fairness and goodness = {}, {}.'.format(
+                fairness_diff, goodness_diff))
+        if (fairness_diff < math.pow(10, -6)
+                and goodness_diff < math.pow(10, -6)):
+            break
+
+    return {'fairness': fairness, 'goodness': goodness}

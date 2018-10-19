@@ -25,8 +25,8 @@ class MyTestClass(unittest.TestCase):
             network_utils.extract_graphs(edge_list=sample_edge_list)
 
     @parameterized.expand(
-        [["seperated graphs", False], ["accumulated graphs", True]])
-    def test_extract_graphs(self, name, accumulated):
+        [["seperated graphs", False], ["accumulative graphs", True]])
+    def test_extract_graphs(self, name, accumulative):
         # source, target, weight, edge_date
         matrix_edges = [[1, 2, +1, datetime.datetime(2017, 1, 1)],
                         [2, 3, +1, datetime.datetime(2017, 1, 4)],
@@ -34,8 +34,9 @@ class MyTestClass(unittest.TestCase):
                         [1, 4, -1, datetime.datetime(2017, 2, 13)],
                         [4, 3, -1, datetime.datetime(2017, 2, 24)],
                         [-1, -1, -1, datetime.datetime(2017, 2, 28)]]
-                        # The last one is going to be ignored because fall into
-                        #   another period which is neglected.
+        # The last one is going to be ignored because fall into another period
+        #   which is neglected.
+
         sample_edge_list = pd.DataFrame(
             matrix_edges, columns=['source', 'target', 'weight', 'edge_date'])
         g1 = nx.DiGraph()
@@ -54,15 +55,14 @@ class MyTestClass(unittest.TestCase):
         g3.add_edge(3, 1)
         g3.add_edge(1, 4)
         g3.add_edge(4, 3)
-        if not accumulated:
+        if not accumulative:
             expected = [g1, g2]
         else:
             expected = [g1, g3]
         computed = network_utils.extract_graphs(
-            edge_list=sample_edge_list, weeks=4, accumulated=accumulated)
+            edge_list=sample_edge_list, weeks=4, accumulative=accumulative)
         for expected_graph, computed_graph in zip(expected, computed):
             self.assertTrue(utils.graph_equals(expected_graph, computed_graph))
-
 
     # =========================================================================
     # ==================== get_metrics_for_network ============================
@@ -266,6 +266,22 @@ class MyTestClass(unittest.TestCase):
 
         computed = network_utils.compute_edge_balance(
             DG, no_isomorph_cycles=no_isomorph_cycles)
+        self.assertDictEqual(computed, expected)
+
+    # =========================================================================
+    # ====================== compute_fairness_goodness ========================
+    # =========================================================================
+    def test_compute_fairness_goodness(self):
+        DG = nx.DiGraph()
+        DG.add_nodes_from([1, 2, 3, 4])
+        DG.add_edge(1, 2, weight=1)
+        DG.add_edge(2, 3, weight=1)
+        DG.add_edge(3, 1, weight=1)
+        DG.add_edge(1, 4, weight=2)
+        DG.add_edge(4, 3, weight=-1)
+        expected = {'fairness': {1: 1.0, 2: 0.95, 3: 1.0, 4: 0.95},
+                    'goodness': {1: 1.0, 2: 1.0, 3: 0.0, 4: 2.0}}
+        computed = network_utils.compute_fairness_goodness(DG, verbose=False)
         self.assertDictEqual(computed, expected)
 
 
