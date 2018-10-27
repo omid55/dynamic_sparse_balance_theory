@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from typing import Dict
 from typing import List
 import pandas as pd
+import numpy as np
 import networkx as nx
 
 
@@ -69,3 +70,47 @@ def graph_equals(g1: nx.DiGraph, g2: nx.DiGraph) -> bool:
         None.
     """
     return g1.nodes() == g2.nodes() and g1.edges() == g2.edges()
+
+
+def sub_adjacency_matrix(
+        adj_matrix: np.ndarray,
+        rows: List[int]) -> np.ndarray:
+    """Computes a desired subset of given adjacency matrix.
+
+    Args:
+        adj_matrix: Given adjacencey matrix.
+
+        rows: List of desired rows and same columns for being in the subgraph.
+
+    Returns:
+        Adjancy matrix only including the desired rows and columns.
+
+    Raises:
+        None.
+    """
+    return adj_matrix[np.ix_(rows, rows)]
+
+
+def swap_nodes_in_matrix(
+        matrix: np.ndarray,
+        node1: int,
+        node2: int) -> np.ndarray:
+    """Swaps two nodes in a matrix and return the resulting matrix.
+
+    Args:
+        matrix: Input matrix to be swapped.
+
+        node1: First node to be swapped with second one.
+
+        node2: Second node to be swapped with first one.
+
+    Returns:
+        Matrix with swapped nodes.
+
+    Raises:
+        None.
+    """
+    result = np.copy(matrix)
+    result[:, [node1, node2]] = result[:, [node2, node1]]
+    result[[node1, node2], :] = result[[node2, node1], :]
+    return result

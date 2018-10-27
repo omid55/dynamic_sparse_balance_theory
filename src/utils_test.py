@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 from io import StringIO
 import pandas as pd
+import numpy as np
 import sys
 import utils
 import networkx as nx
@@ -72,6 +73,35 @@ class MyTestClass(unittest.TestCase):
         g2.add_edge(2, 3)
         g2.add_edge(1, 3)
         self.assertFalse(utils.graph_equals(g1, g2))
+
+    # =========================================================================
+    # ==================== sub_adjacency_matrix ===============================
+    # =========================================================================
+    def test_sub_adjacency_matrix(self):
+        adj_matrix = np.arange(16).reshape(4, 4)
+        expected = np.array(
+            [[0, 1, 3],
+             [4, 5, 7],
+             [12, 13, 15]])
+        computed = utils.sub_adjacency_matrix(adj_matrix, [0, 1, 3])
+        np.testing.assert_array_equal(expected, computed)
+
+    # =========================================================================
+    # ==================== swap_nodes_in_matrix ===============================
+    # =========================================================================
+    def test_swap_nodes_in_matrix(self):
+        matrix = np.array(
+            [[0, 1, 2],
+             [3, 4, 5],
+             [6, 7, 8]])
+        node1 = 0
+        node2 = 2
+        expected = np.array(
+            [[8, 7, 6],
+             [5, 4, 3],
+             [2, 1, 0]])
+        computed = utils.swap_nodes_in_matrix(matrix, node1, node2)
+        np.testing.assert_array_equal(expected, computed)
 
 
 if __name__ == '__main__':

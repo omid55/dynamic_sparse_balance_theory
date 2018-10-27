@@ -10,12 +10,14 @@ from __future__ import absolute_import
 
 from typing import Dict
 from typing import List
+from typing import Set
+from typing import Tuple
+import itertools
 import numpy as np
 import pandas as pd
 import datetime
 import networkx as nx
 import math
-
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -76,11 +78,11 @@ def extract_graphs(
     return dgraphs
 
 
-def get_metrics_for_network(directed_graph: nx.graph) -> Dict[str, int]:
+def get_metrics_for_network(dgraph: nx.graph) -> Dict[str, int]:
     """Gets the different metrics of the given directed network.
 
     Args:
-        directed_graph: The input network.
+        dgraph: The input network.
 
     Returns:
         Dictionary of metrics mapped from name to integer value.
@@ -91,36 +93,36 @@ def get_metrics_for_network(directed_graph: nx.graph) -> Dict[str, int]:
     metrics = {}
 
     # For directed graph.
-    n = len(directed_graph.nodes())
-    e = len(directed_graph.edges())
+    n = len(dgraph.nodes())
+    e = len(dgraph.edges())
     metrics['#nodes'] = n
     metrics['#edges'] = e
     metrics['#edges/#nodes'] = e / n
     metrics['average in degree'] = np.mean(
-        [deg for _, deg in list(directed_graph.in_degree)])
+        [deg for _, deg in list(dgraph.in_degree)])
     metrics['average out degree'] = np.mean(
-        [deg for _, deg in list(directed_graph.out_degree)])
+        [deg for _, deg in list(dgraph.out_degree)])
     metrics['average w in degree'] = np.mean(
-        [deg for _, deg in list(directed_graph.in_degree(weight='weight'))])
+        [deg for _, deg in list(dgraph.in_degree(weight='weight'))])
     metrics['average w out degree'] = np.mean(
-        [deg for _, deg in list(directed_graph.out_degree(weight='weight'))])
+        [deg for _, deg in list(dgraph.out_degree(weight='weight'))])
     metrics['average degree'] = np.mean(
-        [deg for _, deg in list(directed_graph.degree)])
+        [deg for _, deg in list(dgraph.degree)])
     metrics['average load'] = np.mean(list(
-        nx.load_centrality(directed_graph).values()))
+        nx.load_centrality(dgraph).values()))
     metrics['average eigenvector'] = np.mean(list(
-        nx.eigenvector_centrality(directed_graph, max_iter=10000).values()))
+        nx.eigenvector_centrality(dgraph, max_iter=10000).values()))
     metrics['average harmonic'] = np.mean(list(
-        nx.harmonic_centrality(directed_graph).values()))
+        nx.harmonic_centrality(dgraph).values()))
     metrics['average closeness'] = np.mean(list(
-        nx.closeness_centrality(directed_graph).values()))
+        nx.closeness_centrality(dgraph).values()))
     metrics['average betweenness'] = np.mean(list(
-        nx.betweenness_centrality(directed_graph).values()))
+        nx.betweenness_centrality(dgraph).values()))
 
     # Directed graphs' weights.
-    weights = np.zeros(len(directed_graph.edges()))
-    for i, edge in enumerate(directed_graph.edges()):
-        weights[i] = directed_graph.get_edge_data(edge[0], edge[1])['weight']
+    weights = np.zeros(len(dgraph.edges()))
+    for i, edge in enumerate(dgraph.edges()):
+        weights[i] = dgraph.get_edge_data(edge[0], edge[1])['weight']
     metrics['weights min'] = min(weights)
     metrics['weights max'] = max(weights)
     metrics['weights average'] = np.mean(weights)
@@ -129,14 +131,14 @@ def get_metrics_for_network(directed_graph: nx.graph) -> Dict[str, int]:
     metrics['#neg edges'] = len(np.where(weights < 0)[0])
 
     # For undirected version of the given directed graph.
-    undirected_graph = nx.to_undirected(directed_graph)
+    ugraph = nx.to_undirected(dgraph)
     metrics['average (und) clustering coefficient'] = np.mean(
-        list(nx.clustering(undirected_graph, weight=None).values()))
+        list(nx.clustering(ugraph, weight=None).values()))
     metrics['algebraic connectivity'] = nx.algebraic_connectivity(
-        undirected_graph, weight='weight')
+        ugraph, weight='weight')
 
     # For Giant Connected Component.
-    GCC = max(nx.connected_component_subgraphs(undirected_graph), key=len)
+    GCC = ugraph.subgraph(max(c for c in nx.connected_components(ugraph)))
     metrics['#gcc nodes'] = len(GCC.nodes())
     metrics['#gcc edges'] = len(GCC.edges())
     gcc_weights = np.zeros(len(GCC.edges()))
@@ -150,7 +152,7 @@ def get_metrics_for_network(directed_graph: nx.graph) -> Dict[str, int]:
 
     # My balance metrics.
     edge_balance = compute_edge_balance(
-        directed_graph, no_isomorph_cycles=True)
+        dgraph, no_isomorph_cycles=True)
     balanced_cycles = 0
     cycles = 0
     for value in edge_balance.values():
@@ -220,7 +222,7 @@ def count_different_signed_edges(dgraph):
 
 def compute_edge_balance(
         dgraph: nx.DiGraph,
-        no_isomorph_cycles=False) -> Dict[tuple, Dict[str, int]]:
+        no_isomorph_cycles: bool = False) -> Dict[tuple, Dict[str, int]]:
     """Computes edge balance based on Van De Rijt idea.
 
     With no_isomorph_cycles=True, we can get the number of cycles and edge
@@ -401,3 +403,233 @@ def compute_fairness_goodness(
             break
 
     return {'fairness': fairness, 'goodness': goodness}
+
+
+def is_transitive_balanced(triad: np.ndarray) -> bool:
+    """Checks whether input triad matrix is transitively balanced or not.
+
+    Args:
+        triad: Input triad matrix.
+
+    Returns:
+        Boolean result whether triad is transitively balanced or not.
+
+    Raises:
+        ValueError: If there is a self loop in the given triad.
+    """
+    for i in range(3):
+        if triad[i, i]:
+            raise ValueError('There is a self loop in given triad: {}.'.format(
+                triad))
+
+    for i in range(3):
+        a = i
+        b = (i + 1) % 3
+        c = (i + 2) % 3
+        # For every edge between a and b.
+        if triad[a, b] * triad[b, a] < 0:
+            return False
+
+        # For every path from a to c.
+        if ((abs(triad[a, b]) and abs(triad[b, c]))
+                and (triad[a, b]*triad[b, c]*triad[a, c] <= 0)):
+            return False
+
+        # For every path from c to a.
+        if ((abs(triad[c, b]) and abs(triad[b, a]))
+                and (triad[c, b]*triad[b, a]*triad[c, a] <= 0)):
+            return False
+    return True
+
+
+def _get_all_triad_permutations(triad_matrix: np.ndarray) -> Set[str]:
+    """Gets all of permutations of nodes in a matrix in string format.
+
+    It computes different matrices with swapping same columns and rows.
+
+    Args:
+        triad_matrix: The triad adjacency matrix.
+
+    Returns:
+        Set of string permutations of the triad adjacency matrices.
+
+    Raises:
+        None.
+    """
+    permutations = [triad_matrix]
+    mat01 = utils.swap_nodes_in_matrix(triad_matrix, 0, 1)
+    mat02 = utils.swap_nodes_in_matrix(triad_matrix, 0, 2)
+    mat12 = utils.swap_nodes_in_matrix(triad_matrix, 1, 2)
+    permutations.extend([mat01, mat02, mat12])
+    permutations.extend(
+        [utils.swap_nodes_in_matrix(mat01, 0, 2),
+         utils.swap_nodes_in_matrix(mat01, 1, 2),
+         utils.swap_nodes_in_matrix(mat02, 0, 1),
+         utils.swap_nodes_in_matrix(mat02, 1, 2),
+         utils.swap_nodes_in_matrix(mat12, 0, 1),
+         utils.swap_nodes_in_matrix(mat12, 0, 2)])
+    result = set()
+    for permutation in permutations:
+        result.add(str(permutation))
+    return result
+
+
+def generate_all_possible_sparse_triads(
+        ) -> Tuple[Dict[str, int], List[np.ndarray]]:
+    """Generates all possible sparse triads.
+
+    Args:
+        None.
+
+    Returns:
+        Dictionary of intiallized all sparse triad types.
+
+    Raises:
+        None.
+    """
+    possible_edges = [0, 1, -1]
+    adj_matrices = []
+    for i1 in possible_edges:
+        for i2 in possible_edges:
+            for i3 in possible_edges:
+                for i4 in possible_edges:
+                    for i5 in possible_edges:
+                        for i6 in possible_edges:
+                            adj_matrices.append(np.array(
+                                [[0, i1, i2], [i3, 0, i4], [i5, i6, 0]]))
+    triad_map = {}
+    triad_list = []
+    for adj_matrix in adj_matrices:
+        if str(adj_matrix) not in triad_map:
+            triad_list.append(adj_matrix)
+            triad_index = len(triad_list) - 1
+            for permutation in _get_all_triad_permutations(adj_matrix):
+                triad_map[str(permutation)] = triad_index
+    # triads = {'triad_map': triad_map, 'triad_list': triad_list}
+    return triad_map, triad_list
+
+
+def _detect_triad_type_for_all_subgraph3(
+        dgraph: nx.DiGraph,
+        triad_map: Dict[str, int] = None) -> Dict[str, int]:
+    """Detects triad type for all possible subgraphs of size 3 in given graph.
+
+    Args:
+        dgraph: The directed graph.
+
+        triad_map: Initialized sparse triad map (string to triad type index).
+
+    Returns:
+        Dictionary of string name of subgraph to its triad type index.
+
+    Raises:
+        None.
+    """
+    if not triad_map:
+        triad_map, _ = generate_all_possible_sparse_triads()
+    subgraph2triad_type = {}
+    nodes_list = np.array(dgraph.nodes())
+    adj_matrix = nx.adjacency_matrix(dgraph).todense()
+    adj_matrix[adj_matrix > 0] = 1
+    adj_matrix[adj_matrix < 0] = -1
+    triads = list(itertools.combinations(range(len(nodes_list)), 3))
+    for triad in triads:
+        triad_subgraph_matrix = utils.sub_adjacency_matrix(adj_matrix, triad)
+        triad_subgraph_key = str(np.array(triad_subgraph_matrix, dtype=int))
+        if triad_subgraph_key not in triad_map:
+            print(triad, 'is not found.')
+            print('Their names are:', nodes_list[np.array(triad)])
+            print('Simplified subgraph was:', triad_subgraph_matrix)
+        else:
+            triad_type_index = triad_map[triad_subgraph_key]
+            subgraph2triad_type[str(tuple(
+                nodes_list[np.array(triad)]))] = triad_type_index
+    return subgraph2triad_type
+
+
+def compute_transition_matrix(
+        dgraphs: List[nx.DiGraph],
+        unique_triad_num: int,
+        triad_map: Dict[str, int] = None) -> Dict[str, object]:
+    """Computes transition matrix and triads count for every consequetive graph.
+
+    Args:
+        dgraphs: List of graphs in timely order.
+
+        unique_triad_num: Number of unique sparse triads.
+
+        triad_map: Initialized sparse triad map (string to triad type index).
+
+    Returns:
+        Dictionary of list of transition matrices and list of all subgraphs3
+            with their corresponding triad index.
+
+    Raises:
+        ValueError: If the size of dgraphs is not at least 2.
+    """
+    if len(dgraphs) < 2:
+        raise ValueError(
+            'We need at least 2 directed graphs for computing transition.')
+
+    if not triad_map:
+        triad_map, triad_list = generate_all_possible_sparse_triads()
+        unique_triad_num = len(triad_list)
+
+    # Detects the sparse triad types of all networks.
+    triads_types = [_detect_triad_type_for_all_subgraph3(
+            dgraph=dgraph, triad_map=triad_map) for dgraph in dgraphs]
+
+    transition_matrices = []
+    for index in range(len(dgraphs)-1):
+        triads_type1 = triads_types[index]        # First graph
+        triads_type2 = triads_types[index + 1]    # Subsequent graph
+
+        intersected_keys = list(set.intersection(
+            set(triads_type1.keys()), set(triads_type2.keys())))
+
+        transition_matrix = np.zeros((unique_triad_num, unique_triad_num))
+        for key in intersected_keys:
+            transition_matrix[triads_type1[key], triads_type2[key]] += 1
+
+        # Makes the transition matrix row-stochastic.
+        transition_matrix = np.nan_to_num(
+            transition_matrix.T / np.sum(transition_matrix, axis=1)).T
+
+        transition_matrices.append(transition_matrix)
+    return {'transition_matrices': transition_matrices,
+            'triads_types': triads_types}
+
+
+def get_stationary_distribution(
+        transition_matrix: np.ndarray,
+        EPSILON: float = 0.0001) -> np.ndarray:
+    """Gets the stationary distribution of given transition matrix.
+
+    Args:
+        transition_matrix: Given square matrix.
+
+        EPSILON: Small value to add to the matrix to make it irreducible.
+
+    Returns:
+        Array of size one dimension of matrix.
+
+    Raises:
+        ValueError: If the matrix was not squared.
+    """
+    if transition_matrix.shape[0] != transition_matrix.shape[1]:
+        raise ValueError('Transition matrix is not squared.')
+
+    eps = EPSILON
+    while eps < 1:
+        matrix = transition_matrix.copy()
+        matrix = np.nan_to_num(matrix)
+        matrix += eps
+        irreducible_transition_matrix = (matrix.T / np.sum(matrix, axis=1)).T
+        _, vectors = np.linalg.eig(irreducible_transition_matrix.T)
+        stationary_distribution = [item.real for item in vectors[:, 0]]
+        stationary_distribution /= sum(stationary_distribution)
+        if any([probability < 0 for probability in stationary_distribution]):
+            eps *= 10
+        else:
+            break
+    return stationary_distribution

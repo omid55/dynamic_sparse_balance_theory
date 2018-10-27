@@ -9,6 +9,7 @@ import unittest
 from parameterized import parameterized
 import networkx as nx
 import pandas as pd
+import numpy as np
 import datetime
 
 import utils
@@ -16,6 +17,16 @@ import network_utils
 
 
 class MyTestClass(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.triad_map, cls.triad_list = (
+            network_utils.generate_all_possible_sparse_triads())
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.triad_map
+        del cls.triad_list
+
     # =========================================================================
     # ==================== extract_graphs =====================================
     # =========================================================================
@@ -68,13 +79,13 @@ class MyTestClass(unittest.TestCase):
     # ==================== get_metrics_for_network ============================
     # =========================================================================
     def test_get_metrics_for_network(self):
-        DG = nx.DiGraph()
-        DG.add_nodes_from([1, 2, 3, 4])
-        DG.add_edge(1, 2, weight=1)
-        DG.add_edge(2, 3, weight=1)
-        DG.add_edge(3, 1, weight=-1)
-        DG.add_edge(1, 3, weight=-1)
-        computed = network_utils.get_metrics_for_network(DG)
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=1)
+        dg.add_edge(3, 1, weight=-1)
+        dg.add_edge(1, 3, weight=-1)
+        computed = network_utils.get_metrics_for_network(dg)
         expected = {
             '#edges': 4,
             '#edges/#nodes': 1,
@@ -114,63 +125,63 @@ class MyTestClass(unittest.TestCase):
     # ====================== cartwright_harary_balance ========================
     # =========================================================================
     def test_cartwright_harary_balance(self):
-        DG = nx.DiGraph()
-        DG.add_nodes_from([1, 2, 3])
-        DG.add_edge(1, 2, weight=1)
-        DG.add_edge(2, 3, weight=1)
-        DG.add_edge(3, 1, weight=-1)
-        self.assertEqual(network_utils.cartwright_harary_balance(DG), 0)
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=1)
+        dg.add_edge(3, 1, weight=-1)
+        self.assertEqual(network_utils.cartwright_harary_balance(dg), 0)
 
-        DG = nx.DiGraph()
-        DG.add_nodes_from([1, 2, 3])
-        DG.add_edge(1, 2, weight=-1)
-        DG.add_edge(2, 3, weight=-1)
-        DG.add_edge(3, 1, weight=-1)
-        self.assertEqual(network_utils.cartwright_harary_balance(DG), 0)
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=-1)
+        dg.add_edge(2, 3, weight=-1)
+        dg.add_edge(3, 1, weight=-1)
+        self.assertEqual(network_utils.cartwright_harary_balance(dg), 0)
 
-        DG = nx.DiGraph()
-        DG.add_nodes_from([1, 2, 3])
-        DG.add_edge(1, 2, weight=1)
-        DG.add_edge(2, 3, weight=-1)
-        DG.add_edge(3, 1, weight=-1)
-        self.assertEqual(network_utils.cartwright_harary_balance(DG), 1)
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=-1)
+        dg.add_edge(3, 1, weight=-1)
+        self.assertEqual(network_utils.cartwright_harary_balance(dg), 1)
 
-        DG = nx.DiGraph()
-        DG.add_nodes_from([1, 2, 3, 4, 5])
-        DG.add_edge(1, 2, weight=1)
-        DG.add_edge(2, 3, weight=-1)
-        DG.add_edge(3, 1, weight=-1)
-        DG.add_edge(3, 4, weight=-1)
-        DG.add_edge(4, 1, weight=-1)
-        DG.add_edge(1, 5, weight=1)
-        DG.add_edge(5, 1, weight=-1)
-        DG.add_edge(2, 1, weight=1)
-        self.assertEqual(network_utils.cartwright_harary_balance(DG), 0.5)
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4, 5])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=-1)
+        dg.add_edge(3, 1, weight=-1)
+        dg.add_edge(3, 4, weight=-1)
+        dg.add_edge(4, 1, weight=-1)
+        dg.add_edge(1, 5, weight=1)
+        dg.add_edge(5, 1, weight=-1)
+        dg.add_edge(2, 1, weight=1)
+        self.assertEqual(network_utils.cartwright_harary_balance(dg), 0.5)
 
     def test_count_different_signed_edges(self):
-        DG = nx.DiGraph()
-        DG.add_nodes_from([1, 2, 3])
-        DG.add_edge(1, 2, weight=1)
-        DG.add_edge(2, 1, weight=1)
-        DG.add_edge(3, 1, weight=-5)
-        DG.add_edge(1, 3, weight=-2)
-        self.assertEqual(network_utils.count_different_signed_edges(DG), 0)
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 1, weight=1)
+        dg.add_edge(3, 1, weight=-5)
+        dg.add_edge(1, 3, weight=-2)
+        self.assertEqual(network_utils.count_different_signed_edges(dg), 0)
 
-        DG = nx.DiGraph()
-        DG.add_nodes_from([1, 2, 3])
-        DG.add_edge(1, 2, weight=3)
-        DG.add_edge(2, 1, weight=4)
-        DG.add_edge(3, 1, weight=1)
-        DG.add_edge(1, 3, weight=-1)
-        self.assertEqual(network_utils.count_different_signed_edges(DG), 1)
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=3)
+        dg.add_edge(2, 1, weight=4)
+        dg.add_edge(3, 1, weight=1)
+        dg.add_edge(1, 3, weight=-1)
+        self.assertEqual(network_utils.count_different_signed_edges(dg), 1)
 
-        DG = nx.DiGraph()
-        DG.add_nodes_from([1, 2, 3])
-        DG.add_edge(1, 2, weight=-1)
-        DG.add_edge(2, 1, weight=1)
-        DG.add_edge(3, 1, weight=9)
-        DG.add_edge(1, 3, weight=-2)
-        self.assertEqual(network_utils.count_different_signed_edges(DG), 2)
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=-1)
+        dg.add_edge(2, 1, weight=1)
+        dg.add_edge(3, 1, weight=9)
+        dg.add_edge(1, 3, weight=-2)
+        self.assertEqual(network_utils.count_different_signed_edges(dg), 2)
 
     # =========================================================================
     # ====================== compute_edge_balance =============================
@@ -178,12 +189,12 @@ class MyTestClass(unittest.TestCase):
     @parameterized.expand(
         [["no_isomorph_cycles", False], ["no_isomorph_cycles", True]])
     def test_compute_edge_balance_small_graph(self, name, no_isomorph_cycles):
-        DG = nx.DiGraph()
-        DG.add_nodes_from([1, 2, 3])
-        DG.add_edge(1, 2, weight=1)
-        DG.add_edge(2, 1, weight=1)
-        DG.add_edge(2, 3, weight=-5)
-        DG.add_edge(3, 1, weight=-2)
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 1, weight=1)
+        dg.add_edge(2, 3, weight=-5)
+        dg.add_edge(3, 1, weight=-2)
         if no_isomorph_cycles:
             expected = {
                 (1, 2): {
@@ -209,7 +220,7 @@ class MyTestClass(unittest.TestCase):
                     'weight_distance': 3,
                     'as_expected_sign': True}}
         computed = network_utils.compute_edge_balance(
-            DG, no_isomorph_cycles=no_isomorph_cycles)
+            dg, no_isomorph_cycles=no_isomorph_cycles)
         self.assertDictEqual(computed, expected)
 
     @parameterized.expand(
@@ -217,13 +228,13 @@ class MyTestClass(unittest.TestCase):
             ["no_isomorph_cycles", True]])
     def test_compute_edge_balance_allnegative_graph(
             self, name, no_isomorph_cycles):
-        DG = nx.DiGraph()
-        DG.add_nodes_from([1, 2, 3, 4])
-        DG.add_edge(1, 2, weight=-1)
-        DG.add_edge(2, 3, weight=-1)
-        DG.add_edge(3, 1, weight=-1)
-        DG.add_edge(1, 4, weight=-5)
-        DG.add_edge(4, 3, weight=-2)
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4])
+        dg.add_edge(1, 2, weight=-1)
+        dg.add_edge(2, 3, weight=-1)
+        dg.add_edge(3, 1, weight=-1)
+        dg.add_edge(1, 4, weight=-5)
+        dg.add_edge(4, 3, weight=-2)
         if no_isomorph_cycles:
             expected = {
                 (1, 2): {
@@ -265,24 +276,235 @@ class MyTestClass(unittest.TestCase):
                     'as_expected_sign': False}}
 
         computed = network_utils.compute_edge_balance(
-            DG, no_isomorph_cycles=no_isomorph_cycles)
+            dg, no_isomorph_cycles=no_isomorph_cycles)
         self.assertDictEqual(computed, expected)
 
     # =========================================================================
     # ====================== compute_fairness_goodness ========================
     # =========================================================================
     def test_compute_fairness_goodness(self):
-        DG = nx.DiGraph()
-        DG.add_nodes_from([1, 2, 3, 4])
-        DG.add_edge(1, 2, weight=1)
-        DG.add_edge(2, 3, weight=1)
-        DG.add_edge(3, 1, weight=1)
-        DG.add_edge(1, 4, weight=2)
-        DG.add_edge(4, 3, weight=-1)
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=1)
+        dg.add_edge(3, 1, weight=1)
+        dg.add_edge(1, 4, weight=2)
+        dg.add_edge(4, 3, weight=-1)
         expected = {'fairness': {1: 1.0, 2: 0.95, 3: 1.0, 4: 0.95},
                     'goodness': {1: 1.0, 2: 1.0, 3: 0.0, 4: 2.0}}
-        computed = network_utils.compute_fairness_goodness(DG, verbose=False)
+        computed = network_utils.compute_fairness_goodness(dg, verbose=False)
         self.assertDictEqual(computed, expected)
+
+    # =========================================================================
+    # ====================== is_transitive_balanced ===========================
+    # =========================================================================
+    def test_is_transitive_balanced_raises_when_self_loops(self):
+        with self.assertRaises(ValueError):
+            triad_with_self_loop = np.array(
+                [[0, 1, 0],
+                 [0, 1, 1],
+                 [0, 0, 0]])
+            network_utils.is_transitive_balanced(triad_with_self_loop)
+
+    @parameterized.expand([
+        ["030T", np.array(
+            [[0, 1, 1],
+             [0, 0, 1],
+             [0, 0, 0]]), True],
+        ["030Tneg", np.array(
+            [[0, 1, -1],
+             [0, 0, 1],
+             [0, 0, 0]]), False],
+        ["030T2neg", np.array(
+            [[0, 1, -1],
+             [0, 0, -1],
+             [0, 0, 0]]), True],
+        ["021Uneg", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, -1, 0]]), True],
+        ["021D", np.array(
+            [[0, 0, 0],
+             [1, 0, 1],
+             [0, 0, 0]]), True],
+        ["210", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [1, 1, 0]]), False],
+        ["003", np.array(
+            [[0, 0, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), True]]
+        )
+    def test_is_transitive_balanced(self, name, triad, expected_balance):
+        self.assertEqual(
+            network_utils.is_transitive_balanced(triad), expected_balance)
+
+    # =========================================================================
+    # ====================== get_all_triad_permutations =======================
+    # =========================================================================
+    def test_get_all_triad_permutations(self):
+        triad_adj_matrix = np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [1, 1, 0]])
+        expected = set([
+            '[[0 1 1]\n [1 0 1]\n [1 0 0]]',
+            '[[0 0 1]\n [1 0 1]\n [1 1 0]]',
+            '[[0 1 1]\n [0 0 1]\n [1 1 0]]',
+            '[[0 1 1]\n [1 0 1]\n [0 1 0]]',
+            '[[0 1 1]\n [1 0 0]\n [1 1 0]]',
+            '[[0 1 0]\n [1 0 1]\n [1 1 0]]'])
+        computed = network_utils._get_all_triad_permutations(triad_adj_matrix)
+        self.assertEqual(expected, computed)
+
+    # =========================================================================
+    # ====================== generate_all_possible_sparse_triads ==============
+    # =========================================================================
+    def test_generate_all_possible_sparse_triads(self):
+        computed_triad_map, computed_triad_list = (
+            network_utils.generate_all_possible_sparse_triads())
+
+        # Testing triad_list
+        self.assertTrue(
+            len(computed_triad_list) == 138,
+            'Length of triad_list is not correct.')
+        np.testing.assert_array_equal(
+            computed_triad_list[0], np.array(
+                [[0, 0, 0],
+                 [0, 0, 0],
+                 [0, 0, 0]]), 'First triad_list is incorrect.')
+        np.testing.assert_array_equal(
+            computed_triad_list[-1], np.array(
+                [[0, -1, -1],
+                 [-1,  0, -1],
+                 [-1, -1,  0]]), 'Last triad_list is incorrect.')
+        np.testing.assert_array_equal(
+            computed_triad_list[69], np.array(
+                [[0,  0,  1],
+                 [1,  0, -1],
+                 [1,  0,  0]]), 'Middle triad_list is incorrect.')
+
+        # Testing triad_map.
+        expected_key1 = '[[0 0 0]\n [1 0 0]\n [0 0 0]]'
+        expected_value1 = 1
+        expected_key2 = '[[ 0  1  1]\n [-1  0  1]\n [-1 -1  0]]'
+        expected_value2 = 129
+
+        self.assertTrue(
+            expected_key1 in computed_triad_map,
+            'First key was not found in computed_triad_map.')
+        self.assertTrue(
+            expected_key2 in computed_triad_map,
+            'Second key was not found in computed_triad_map.')
+        self.assertEqual(
+            computed_triad_map[expected_key1], expected_value1,
+            'First value was not found in computed_triad_map.')
+        self.assertEqual(
+            computed_triad_map[expected_key2], expected_value2,
+            'Second value was not found in computed_triad_map.')
+
+    # =========================================================================
+    # ====================== detect_triad_type_for_all_subgraph3 ==============
+    # =========================================================================
+    def test_detect_triad_type_for_all_subgraph3(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=1)
+        dg.add_edge(3, 1, weight=1)
+        dg.add_edge(1, 4, weight=2)
+        dg.add_edge(4, 3, weight=-5)
+        expected = {
+            '(1, 2, 3)': 55,
+            # [[0, 0, 1],
+            #  [1, 0, 0],
+            #  [0, 1, 0]]
+            '(1, 2, 4)': 3,
+            # [[0, 0, 0],
+            #  [0, 0, 0],
+            #  [1, 1, 0]]
+            '(1, 3, 4)': 56,
+            # [[0, 0, 1],
+            #  [1, 0, 0],
+            #  [0,-1, 0]]
+            '(2, 3, 4)': 24
+            # [[0, 0, 0],
+            #  [1, 0, 0],
+            #  [-1, 0, 0]]
+        }
+        computed = network_utils._detect_triad_type_for_all_subgraph3(
+            dgraph=dg, triad_map=self.triad_map)
+        self.assertDictEqual(expected, computed)
+
+    # =========================================================================
+    # ====================== compute_transition_matrix ========================
+    # =========================================================================
+    def test_compute_transition_matrix(self):
+        dg1 = nx.DiGraph()
+        dg1.add_nodes_from([1, 2, 3, 4])
+        dg1.add_edge(1, 2, weight=1)
+        dg1.add_edge(2, 1, weight=1)
+        dg1.add_edge(2, 3, weight=1)
+        dg1.add_edge(3, 1, weight=-1)
+        dg1.add_edge(3, 4, weight=1)
+        dg2 = nx.DiGraph()
+        dg2.add_nodes_from([1, 2, 3, 4])
+        dg2.add_edge(1, 2, weight=1)
+        dg2.add_edge(2, 1, weight=1)
+        dg2.add_edge(2, 3, weight=1)
+        dg2.add_edge(3, 1, weight=1)
+        dg2.add_edge(3, 4, weight=1)
+        dg2.add_edge(4, 1, weight=1)
+        dgraphs = [dg1, dg2]
+        triads_types = [
+                {'(1, 2, 3)': 76,
+                 '(1, 2, 4)': 6,
+                 '(1, 3, 4)': 4,
+                 '(2, 3, 4)': 8},
+                {'(1, 2, 3)': 57,
+                 '(1, 2, 4)': 42,
+                 '(1, 3, 4)': 22,
+                 '(2, 3, 4)': 8}]
+        n = len(self.triad_list)
+        transition_matrix = np.zeros((n, n))
+        transition_matrix[76, 57] = 1
+        transition_matrix[6, 42] = 1
+        transition_matrix[4, 22] = 1
+        transition_matrix[8, 8] = 1
+        computed = network_utils.compute_transition_matrix(
+            dgraphs=dgraphs,
+            unique_triad_num=n,
+            triad_map=self.triad_map)
+        # self.assertDictEqual(expected, computed)
+        self.assertTrue(
+            'triads_types' in computed,
+            'triads_types was not found in computed transition matrix.')
+        self.assertTrue(
+            'transition_matrices' in computed,
+            'transition_matrices was not found in computed transition matrix.')
+        self.assertEqual(
+            triads_types,
+            computed['triads_types'],
+            'Triad types were different.')
+        np.testing.assert_array_equal(
+            transition_matrix,
+            computed['transition_matrices'][0],
+            'Transition matrices were different.')
+
+    # =========================================================================
+    # ====================== get_stationary_distribution ======================
+    # =========================================================================
+    def test_get_stationary_distribution_simple(self):
+        transition_matrix = np.array(
+            [[0, 0, 1], [0, 0, 1], [0, 0, 1]], dtype=float)
+        expected = np.array([0.0097, 0.0097, 0.9806])
+        computed = network_utils.get_stationary_distribution(
+            transition_matrix, EPSILON=0.01)
+        np.testing.assert_array_almost_equal(expected, computed, decimal=4)
+
+    # def test_get_stationary_distribution(self):
+    #     np.array([[0, 0, 0], [10, 0, 1], [1, 0, 3]])
 
 
 if __name__ == '__main__':
