@@ -12,7 +12,11 @@ from typing import Dict
 from typing import List
 import pandas as pd
 import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+import pickle as pk
 import networkx as nx
+import shelve
 
 
 def print_dict_pretty(input_dict: Dict) -> None:
@@ -114,3 +118,121 @@ def swap_nodes_in_matrix(
     result[:, [node1, node2]] = result[:, [node2, node1]]
     result[[node1, node2], :] = result[[node2, node1], :]
     return result
+
+
+def make_matrix_row_stochastic(matrix: np.ndarray) -> np.ndarray:
+    """Makes the matrix row-stochastic (sum of each row is 1)
+
+    Args:
+        matrix: Input matrix.
+
+    Returns:
+        Matrix which its rows sum up to 1.
+
+    Raises:
+        None.
+    """
+    return np.nan_to_num(matrix.T / np.sum(matrix, axis=1)).T
+
+
+def fully_savefig(
+        fig_object: matplotlib.figure.Figure,
+        file_path: str) -> None:
+    """Fully saves the figure in pdf and pkl format for later modification.
+
+    This function saves the figure in a pkl and pdf such that later can
+        be loaded and easily be modified.
+        To have the figure object, one can add the following line of the code
+        to the beginning of their code:
+            fig_object = plt.figure()
+
+    Args:
+        fig_object: Figure object (computed by "plt.figure()")
+
+        file_path: String file path without file extension.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    # Saves as pdf.
+    plt.savefig(file_path + '.pdf', dpi=fig_object.dpi)
+    # Also saves as pickle.
+    with open(file_path + '.pkl', 'wb') as handle:
+        pk.dump(fig_object, handle, protocol=pk.HIGHEST_PROTOCOL)
+
+
+def fully_loadfig(file_path: str) -> matplotlib.figure.Figure:
+    """Fully loads the saved figure to be able to be modified.
+
+    It can be easily showed by:
+        fig_object.show()
+
+    Args:
+        file_path: String file path without file extension.
+
+    Returns:
+        Figure object.
+
+    Raises:
+        None.
+    """
+    with open(file_path + '.pkl', 'rb') as handle:
+        fig_object = pk.load(handle)
+    return fig_object
+
+
+def save_all_variables_of_current_session(
+        locals_: dict,
+        file_path: str) -> None:
+    """Saves all defined variables in the current session to be used later.
+
+    It works similar to save_all in MATLAB. It is super useful when one is
+    trying to save everything in a notebook for later runs of a subset of cells
+    of the notebook.
+
+    Args:
+        locals_: Just call this as the first parameter ALWAYS: locals()
+        file_path: String file path (with extension).
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    my_shelf = shelve.open(file_path, 'n')
+    # for key in dir():
+    for key, value in locals_.items():
+        if not key.startswith('__') and key != 'self':
+            try:
+                my_shelf[key] = value  # globals()[key]
+            except TypeError:
+                print('ERROR shelving: {0}'.format(key))
+    my_shelf.close()
+
+
+def load_all_variables_of_saved_session(
+        globals_: dict,
+        file_path: str) -> None:
+    """Loads all defined variables from a saved session into current session.
+
+    It should be used after running "save_all_variables_of_current_session".
+
+    Args:
+        globals_: Just call this as the first parameter ALWAYS: globals()
+
+        file_path: String file path (with extension).
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    my_shelf = shelve.open(file_path)
+    for key in my_shelf:
+        globals_[key] = my_shelf[key]
+    my_shelf.close()

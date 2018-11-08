@@ -9,9 +9,12 @@ from io import StringIO
 import pandas as pd
 import numpy as np
 import sys
+import os
 import utils
 import networkx as nx
+import matplotlib.pyplot as plt
 import unittest
+import shelve
 
 
 class MyTestClass(unittest.TestCase):
@@ -102,6 +105,54 @@ class MyTestClass(unittest.TestCase):
              [2, 1, 0]])
         computed = utils.swap_nodes_in_matrix(matrix, node1, node2)
         np.testing.assert_array_equal(expected, computed)
+
+    # =========================================================================
+    # ==================== make_matrix_row_stochastic =========================
+    # =========================================================================
+    def test_make_matrix_row_stochastic(self):
+        matrix = np.array(
+            [[0, 1, 2],
+             [3, 4, 5],
+             [6, 7, 8]])
+        expected = np.array(
+            [[0, 0.33, 0.67],
+             [0.25, 0.33, 0.42],
+             [0.29, 0.33, 0.38]])
+        computed = utils.make_matrix_row_stochastic(matrix)
+        np.testing.assert_array_almost_equal(expected, computed, decimal=2)
+
+    # =========================================================================
+    # ======================= fully_savefig ===================================
+    # ======================= fully_loadfig ===================================
+    # =========================================================================
+    def test_fully_save_and_load_fig(self):
+        fig_object = plt.figure()
+        file_path = 'test_file'
+        utils.fully_savefig(fig_object=fig_object, file_path=file_path)
+        loaded_fig_object = utils.fully_loadfig(file_path=file_path)
+        os.remove(file_path+'.pkl')
+        os.remove(file_path+'.pdf')
+        self.assertEqual(fig_object.images, loaded_fig_object.images)
+        self.assertEqual(fig_object.axes, loaded_fig_object.axes)
+
+    # =========================================================================
+    # ============= save_all_variables_of_current_session =====================
+    # ============= load_all_variables_of_saved_session =======================
+    # =========================================================================
+    def test_save_and_load_all_variables_firstpart(self):
+        str_var = 'anything'
+        list_var = [1, 2, 5]
+        file_path = 'test_file'
+        utils.save_all_variables_of_current_session(locals(), file_path)
+
+    def test_save_and_load_all_variables_secondpart(self):
+        expected_str_var = 'anything'
+        expected_list_var = [1, 2, 5]
+        file_path = 'test_file'
+        utils.load_all_variables_of_saved_session(globals(), file_path)
+        self.assertEqual(expected_str_var, str_var)
+        self.assertEqual(expected_list_var, list_var)
+        os.remove(file_path)
 
 
 if __name__ == '__main__':

@@ -11,6 +11,7 @@ import networkx as nx
 import pandas as pd
 import numpy as np
 import datetime
+import re
 
 import utils
 import network_utils
@@ -437,6 +438,41 @@ class MyTestClass(unittest.TestCase):
             dgraph=dg, triad_map=self.triad_map)
         self.assertDictEqual(expected, computed)
 
+    def test_detect_triad_type_for_all_subgraph3_nodes_with_str_name(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from(['b', 'c', 'a', 'd'])
+        dg.add_edge('b', 'c', weight=1)
+        dg.add_edge('c', 'a', weight=1)
+        dg.add_edge('a', 'b', weight=1)
+        dg.add_edge('b', 'd', weight=2)
+        dg.add_edge('d', 'a', weight=-5)
+        expected = {
+            "('a', 'b', 'c')": 55,
+            "('a', 'b', 'd')": 56,
+            "('a', 'c', 'd')": 24,
+            "('b', 'c', 'd')": 3
+        }
+        computed = network_utils._detect_triad_type_for_all_subgraph3(
+            dgraph=dg, triad_map=self.triad_map)
+        self.assertDictEqual(expected, computed)
+
+    def test_detect_triad_type_for_all_subgraph3_has_unique_keys(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from(['b', 'c', 'a', 'd'])
+        dg.add_edge('b', 'c', weight=1)
+        dg.add_edge('c', 'a', weight=1)
+        dg.add_edge('a', 'b', weight=1)
+        dg.add_edge('b', 'd', weight=2)
+        dg.add_edge('d', 'a', weight=-5)
+        computed = network_utils._detect_triad_type_for_all_subgraph3(
+            dgraph=dg, triad_map=self.triad_map)
+        truncated_keys = []
+        for key in list(computed.keys()):
+            key = re.sub(r'[^\w]', ' ', key)
+            key = key.replace(" ", "")
+            truncated_keys.append(''.join(sorted(key)))
+        self.assertEqual(len(truncated_keys), len(np.unique(truncated_keys)))
+
     # =========================================================================
     # ====================== compute_transition_matrix ========================
     # =========================================================================
@@ -453,6 +489,8 @@ class MyTestClass(unittest.TestCase):
         dg2.add_edge(1, 2, weight=1)
         dg2.add_edge(2, 1, weight=1)
         dg2.add_edge(2, 3, weight=1)
+        dg2.add_edge(3, 2, weight=1)
+        dg2.add_edge(1, 3, weight=1)
         dg2.add_edge(3, 1, weight=1)
         dg2.add_edge(3, 4, weight=1)
         dg2.add_edge(4, 1, weight=1)
@@ -462,16 +500,16 @@ class MyTestClass(unittest.TestCase):
                  '(1, 2, 4)': 6,
                  '(1, 3, 4)': 4,
                  '(2, 3, 4)': 8},
-                {'(1, 2, 3)': 57,
+                {'(1, 2, 3)': 122,
                  '(1, 2, 4)': 42,
-                 '(1, 3, 4)': 22,
-                 '(2, 3, 4)': 8}]
+                 '(1, 3, 4)': 57,
+                 '(2, 3, 4)': 9}]
         n = len(self.triad_list)
         transition_matrix = np.zeros((n, n))
-        transition_matrix[76, 57] = 1
+        transition_matrix[76, 122] = 1
         transition_matrix[6, 42] = 1
-        transition_matrix[4, 22] = 1
-        transition_matrix[8, 8] = 1
+        transition_matrix[4, 57] = 1
+        transition_matrix[8, 9] = 1
         computed = network_utils.compute_transition_matrix(
             dgraphs=dgraphs,
             unique_triad_num=n,
@@ -497,14 +535,113 @@ class MyTestClass(unittest.TestCase):
     # =========================================================================
     def test_get_stationary_distribution_simple(self):
         transition_matrix = np.array(
-            [[0, 0, 1], [0, 0, 1], [0, 0, 1]], dtype=float)
-        expected = np.array([0.0097, 0.0097, 0.9806])
+            [[0, 0, 1],
+             [0, 0, 1],
+             [0, 0, 1]], dtype=float)
+        expected = np.array([0, 0, 1])
         computed = network_utils.get_stationary_distribution(
-            transition_matrix, EPSILON=0.01)
+            transition_matrix, EPSILON=0.0)
         np.testing.assert_array_almost_equal(expected, computed, decimal=4)
 
-    # def test_get_stationary_distribution(self):
-    #     np.array([[0, 0, 0], [10, 0, 1], [1, 0, 3]])
+    def test_get_stationary_distribution_full_matrix(self):
+        transition_matrix = np.array(
+            [[0.6, 0.1, 0.3],
+             [0.1, 0.7, 0.2],
+             [0.2, 0.2, 0.6]], dtype=float)
+        expected = np.array([0.2759, 0.3448, 0.3793])
+        computed = network_utils.get_stationary_distribution(
+            transition_matrix, EPSILON=0.0)
+        np.testing.assert_array_almost_equal(expected, computed, decimal=4)
+
+    def test_get_stationary_distribution_not_row_stochastic(self):
+        transition_matrix = np.array(
+            [[0, 0, 0],
+             [9, 0, 1],
+             [1, 0, 3]], dtype=float)
+        expected = np.array([0.3571, 0.1191, 0.5238])
+        computed = network_utils.get_stationary_distribution(
+            transition_matrix, EPSILON=0.0001)
+        np.testing.assert_array_almost_equal(expected, computed, decimal=4)
+
+    def test_get_stationary_distribution(self):
+        transition_matrix = np.array(
+            [[0, 0, 0],
+             [0.9, 0, 0.1],
+             [0.25, 0, 0.75]], dtype=float)
+        expected = np.array([0.3571, 0.1191, 0.5238])
+        computed = network_utils.get_stationary_distribution(
+            transition_matrix, EPSILON=0.0001)
+        np.testing.assert_array_almost_equal(expected, computed, decimal=4)
+
+    # # =========================================================================
+    # # ====================== get_mixing_time_range ============================
+    # # =========================================================================
+    # def test_get_mixing_time_range(self):
+    #     transition_matrix = np.array(
+    #         [[0, 0, 0],
+    #          [0.9, 0, 0.1],
+    #          [0.25, 0, 0.75]], dtype=float)
+    #     expected = []
+    #     computed = network_utils.get_mixing_time_range(
+    #         transition_matrix, EPSILON=0.0001)
+    #     self.assertEqual(expected, computed)
+
+    # =========================================================================
+    # ====================== randomize_network ================================
+    # =========================================================================
+    def test_randomize_network_with_unweighted_graph(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4, 5, 6])
+        dg.add_edge(1, 2)
+        dg.add_edge(2, 1)
+        dg.add_edge(2, 3)
+        dg.add_edge(3, 1)
+        dg.add_edge(3, 4)
+        dg.add_edge(4, 5)
+        dg.add_edge(5, 4)
+        dg.add_edge(1, 6)
+        dg.add_edge(6, 1)
+        dg.add_edge(6, 5)
+        computed = network_utils.randomize_network(dg, switching_count_coef=2)
+        self.assertEqual(
+            sorted(dict(dg.degree()).values()),
+            sorted(dict(computed.degree()).values()))
+
+    def test_randomize_network_with_all_positive_weighted_graph(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4, 5, 6])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 1, weight=1)
+        dg.add_edge(2, 3, weight=1)
+        dg.add_edge(3, 1, weight=2)
+        dg.add_edge(3, 4, weight=5)
+        dg.add_edge(4, 5, weight=9)
+        dg.add_edge(5, 4, weight=6)
+        dg.add_edge(1, 6, weight=9)
+        dg.add_edge(6, 1, weight=1)
+        dg.add_edge(6, 5, weight=16)
+        computed = network_utils.randomize_network(dg, switching_count_coef=2)
+        self.assertEqual(
+            sorted(dict(dg.degree()).values()),
+            sorted(dict(computed.degree()).values()))
+
+    def test_randomize_network_with_signed_weighted_graph(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4, 5, 6])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 1, weight=1)
+        dg.add_edge(2, 3, weight=1)
+        dg.add_edge(3, 1, weight=-2)
+        dg.add_edge(3, 4, weight=5)
+        dg.add_edge(4, 5, weight=9)
+        dg.add_edge(5, 4, weight=-6)
+        dg.add_edge(1, 6, weight=-9)
+        dg.add_edge(6, 1, weight=1)
+        dg.add_edge(6, 5, weight=-16)
+        computed = network_utils.randomize_network(dg, switching_count_coef=2)
+        self.assertEqual(
+            sorted(dict(dg.degree()).values()),
+            sorted(dict(computed.degree()).values()))
 
 
 if __name__ == '__main__':

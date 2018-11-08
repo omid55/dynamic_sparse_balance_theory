@@ -511,13 +511,16 @@ def generate_all_possible_sparse_triads(
 
 def _detect_triad_type_for_all_subgraph3(
         dgraph: nx.DiGraph,
-        triad_map: Dict[str, int] = None) -> Dict[str, int]:
+        triad_map: Dict[str, int] = None,
+        verbose: bool = False) -> Dict[str, int]:
     """Detects triad type for all possible subgraphs of size 3 in given graph.
 
     Args:
         dgraph: The directed graph.
 
         triad_map: Initialized sparse triad map (string to triad type index).
+
+        verbose: Whether we want it to print '.' as the finished indicator.
 
     Returns:
         Dictionary of string name of subgraph to its triad type index.
@@ -542,15 +545,20 @@ def _detect_triad_type_for_all_subgraph3(
             print('Simplified subgraph was:', triad_subgraph_matrix)
         else:
             triad_type_index = triad_map[triad_subgraph_key]
+            # It is imported to sort the key name unless final dictionary
+            #   might have non-unique keys.
             subgraph2triad_type[str(tuple(
-                nodes_list[np.array(triad)]))] = triad_type_index
+                sorted(nodes_list[np.array(triad)])))] = triad_type_index
+    if verbose:
+        print('.', end='')
     return subgraph2triad_type
 
 
 def compute_transition_matrix(
         dgraphs: List[nx.DiGraph],
         unique_triad_num: int,
-        triad_map: Dict[str, int] = None) -> Dict[str, object]:
+        triad_map: Dict[str, int] = None,
+        verbose: bool = False) -> Dict[str, object]:
     """Computes transition matrix and triads count for every consequetive graph.
 
     Args:
@@ -559,6 +567,8 @@ def compute_transition_matrix(
         unique_triad_num: Number of unique sparse triads.
 
         triad_map: Initialized sparse triad map (string to triad type index).
+
+        verbose: If we want to print a . as progress while computing.
 
     Returns:
         Dictionary of list of transition matrices and list of all subgraphs3
@@ -577,12 +587,13 @@ def compute_transition_matrix(
 
     # Detects the sparse triad types of all networks.
     triads_types = [_detect_triad_type_for_all_subgraph3(
-            dgraph=dgraph, triad_map=triad_map) for dgraph in dgraphs]
+            dgraph=dgraph, triad_map=triad_map, verbose=verbose)
+            for dgraph in dgraphs]
 
     transition_matrices = []
     for index in range(len(dgraphs)-1):
-        triads_type1 = triads_types[index]        # First graph
-        triads_type2 = triads_types[index + 1]    # Subsequent graph
+        triads_type1 = triads_types[index]        # First graph.
+        triads_type2 = triads_types[index + 1]    # Subsequent graph.
 
         intersected_keys = list(set.intersection(
             set(triads_type1.keys()), set(triads_type2.keys())))
@@ -591,9 +602,7 @@ def compute_transition_matrix(
         for key in intersected_keys:
             transition_matrix[triads_type1[key], triads_type2[key]] += 1
 
-        # Makes the transition matrix row-stochastic.
-        transition_matrix = np.nan_to_num(
-            transition_matrix.T / np.sum(transition_matrix, axis=1)).T
+        transition_matrix = utils.make_matrix_row_stochastic(transition_matrix)
 
         transition_matrices.append(transition_matrix)
     return {'transition_matrices': transition_matrices,
@@ -618,18 +627,175 @@ def get_stationary_distribution(
     """
     if transition_matrix.shape[0] != transition_matrix.shape[1]:
         raise ValueError('Transition matrix is not squared.')
-
-    eps = EPSILON
-    while eps < 1:
-        matrix = transition_matrix.copy()
-        matrix = np.nan_to_num(matrix)
-        matrix += eps
-        irreducible_transition_matrix = (matrix.T / np.sum(matrix, axis=1)).T
-        _, vectors = np.linalg.eig(irreducible_transition_matrix.T)
-        stationary_distribution = [item.real for item in vectors[:, 0]]
-        stationary_distribution /= sum(stationary_distribution)
-        if any([probability < 0 for probability in stationary_distribution]):
-            eps *= 10
-        else:
-            break
+    matrix = transition_matrix.copy()
+    matrix = np.nan_to_num(matrix)
+    matrix += EPSILON
+    aperiodic_irreducible_transition_matrix = (
+        matrix.T / np.sum(matrix, axis=1)).T
+    eigen_values, eigen_vectors = np.linalg.eig(
+        aperiodic_irreducible_transition_matrix.T)
+    index = np.where(eigen_values > 0.99)[0][0]
+    stationary_distribution = [item.real for item in eigen_vectors[:, index]]
+    stationary_distribution /= sum(stationary_distribution)
     return stationary_distribution
+
+
+# def get_mixing_time_range(
+#         transition_matrix: np.ndarray,
+#         EPSILON: float = 0.0001) -> np.ndarray:
+#     if transition_matrix.shape[0] != transition_matrix.shape[1]:
+#             raise ValueError('Transition matrix is not squared.')
+#     matrix = transition_matrix.copy()
+#     matrix = np.nan_to_num(matrix)
+#     matrix += EPSILON
+#     aperiodic_irreducible_transition_matrix = (
+#         matrix.T / np.sum(matrix, axis=1)).T
+#     eigen_values, eigen_vectors = np.linalg.eig(
+#         aperiodic_irreducible_transition_matrix.T)
+#     print('\neigen_values:', eigen_values, '\neigen_vectors:', eigen_vectors)
+#     index = np.where(eigen_values > 0.99)[0][0]
+#     stationary_distribution = [item.real for item in eigen_vectors[:, index]]
+#     stationary_distribution /= sum(stationary_distribution)
+#     lambda2 = sorted(eigen_values, reverse=True)[1]
+#     pie_star = np.min(stationary_distribution)
+#     print("\nlambda2:", lambda2, "\npie_star:", pie_star)
+#     EPSILON = 0.6
+#     return [(1/(2*np.log(2*EPSILON))) * (lambda2 / (1-lambda2)),
+#             (1/(1-lambda2))*np.log(1/pie_star*EPSILON)]
+
+
+def randomize_network(
+        dgraph: nx.DiGraph,
+        switching_count_coef: int = 300) -> nx.DiGraph:
+    """Generates randomized network for a given adjancecy matrix.
+
+    It preserves the in- and out- degree intact. It keeps the degree
+    distribution by randomly switches single and double edges for at least
+    MAX_TIMES time nothing changed.
+
+    Args:
+        dgraph: The input directed graph.
+
+        switching_count_coef: The coef for number of edge switchings.
+
+    Returns:
+        Adjacency matrix of randomized network with same in- and out-degree.
+
+    Raises:
+        Exception if the algorithm does not converge.
+    """
+    # If after MAX_TIMES times, it couldn't switch, we call it consensus
+    #   (convergence) and terminate the algorithm.
+    MAX_TIMES = 1000
+
+    adj = nx.adjacency_matrix(dgraph).todense()
+    edge_count = len(dgraph.edges())
+    desired_switching_count = switching_count_coef * edge_count
+    switching_count = 0
+    prev_switching_count = 0
+    counter = 0
+
+    while switching_count < desired_switching_count:
+        # Randomly choose 2 edges.
+        counter += 1
+
+        binarized_adj = abs(adj.copy())
+        binarized_adj[binarized_adj > 0] = 1
+        both_double_edges = np.floor((binarized_adj + binarized_adj.T)/2)
+        double_edges = np.where(both_double_edges > 0)
+
+        # Double edges.
+        i, j = np.random.choice(
+            range(len(double_edges[0])), size=2, replace=False)
+        s1 = double_edges[0][i]
+        t1 = double_edges[1][i]
+        s2 = double_edges[0][j]
+        t2 = double_edges[1][j]
+        if not (adj[s1, t2] or adj[s2, t1] or adj[t2, s1] or adj[t1, s2]
+                or s1 == t2 or s1 == s2 or s2 == t1 or t1 == t2):
+            adj[s1, t2] = adj[s1, t1]
+            adj[s1, t1] = 0
+
+            adj[t2, s1] = adj[t1, s1]
+            adj[t1, s1] = 0
+
+            adj[s2, t1] = adj[s2, t2]
+            adj[s2, t2] = 0
+
+            adj[t1, s2] = adj[t2, s2]
+            adj[t2, s2] = 0
+            switching_count += 1
+
+        # Single edges.
+        # Need to compute it again because adj might have been changed.
+        binarized_adj = abs(adj.copy())
+        binarized_adj[binarized_adj > 0] = 1
+        both_double_edges = np.floor((binarized_adj + binarized_adj.T)/2)
+        single_edges = np.where(binarized_adj - both_double_edges > 0)
+
+        i, j = np.random.choice(
+            range(len(single_edges[0])), size=2, replace=False)
+        s1 = single_edges[0][i]
+        t1 = single_edges[1][i]
+        s2 = single_edges[0][j]
+        t2 = single_edges[1][j]
+        if not(adj[s1, t2] or adj[s2, t1]
+                or s1 == t2 or s1 == s2 or s2 == t1 or t1 == t2):
+            adj[s1, t2] = adj[s1, t1]
+            adj[s1, t1] = 0
+
+            adj[s2, t1] = adj[s2, t2]
+            adj[s2, t2] = 0
+            switching_count += 1
+
+        if not counter % MAX_TIMES:
+            if prev_switching_count == switching_count:
+                raise Exception('Not converged.')
+            else:
+                prev_switching_count = switching_count
+    return nx.from_numpy_matrix(adj, create_using=nx.MultiDiGraph())
+
+
+def compute_randomized_transition_matrix(
+        dgraph1: nx.DiGraph,
+        dgraph2: nx.DiGraph,
+        unique_triad_num: int,
+        triad_map: Dict[str, int] = None,
+        switching_count_coef: int = 300,
+        randomized_num: int = 100) -> List[np.ndarray]:
+    """Computes the transition of many randomized versions of two networks.
+
+    Args:
+        dgraph1: First directed graph.
+
+        dgraph2: Second directed graph.
+
+        unique_triad_num: Number of unique sparse triads.
+
+        triad_map: Initialized sparse triad map (string to triad type index).
+
+        switching_count_coef: The coef for number of edge switchings.
+
+        randomized_num: Number of transition matrices to generate.
+
+    Returns:
+        List of transition matrices from subsequent randomized networks.
+
+    Raises:
+        None.
+    """
+    if not triad_map:
+        triad_map, triad_list = generate_all_possible_sparse_triads()
+        unique_triad_num = len(triad_list)
+    rand_transition_matrices = []
+    for _ in range(randomized_num):
+        rand_dgraph1 = randomize_network(
+            dgraph=dgraph1, switching_count_coef=switching_count_coef)
+        rand_dgraph2 = randomize_network(
+            dgraph=dgraph2, switching_count_coef=switching_count_coef)
+        rand_transition_matrices.append(
+            compute_transition_matrix(
+                dgraphs=[rand_dgraph1, rand_dgraph2],
+                unique_triad_num=unique_triad_num,
+                triad_map=triad_map)['transition_matrices'][0])
+    return rand_transition_matrices
