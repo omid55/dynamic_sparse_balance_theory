@@ -640,28 +640,28 @@ def get_stationary_distribution(
     return stationary_distribution
 
 
-# def get_mixing_time_range(
-#         transition_matrix: np.ndarray,
-#         EPSILON: float = 0.0001) -> np.ndarray:
-#     if transition_matrix.shape[0] != transition_matrix.shape[1]:
-#             raise ValueError('Transition matrix is not squared.')
-#     matrix = transition_matrix.copy()
-#     matrix = np.nan_to_num(matrix)
-#     matrix += EPSILON
-#     aperiodic_irreducible_transition_matrix = (
-#         matrix.T / np.sum(matrix, axis=1)).T
-#     eigen_values, eigen_vectors = np.linalg.eig(
-#         aperiodic_irreducible_transition_matrix.T)
-#     print('\neigen_values:', eigen_values, '\neigen_vectors:', eigen_vectors)
-#     index = np.where(eigen_values > 0.99)[0][0]
-#     stationary_distribution = [item.real for item in eigen_vectors[:, index]]
-#     stationary_distribution /= sum(stationary_distribution)
-#     lambda2 = sorted(eigen_values, reverse=True)[1]
-#     pie_star = np.min(stationary_distribution)
-#     print("\nlambda2:", lambda2, "\npie_star:", pie_star)
-#     EPSILON = 0.6
-#     return [(1/(2*np.log(2*EPSILON))) * (lambda2 / (1-lambda2)),
-#             (1/(1-lambda2))*np.log(1/pie_star*EPSILON)]
+def get_mixing_time_range(
+        transition_matrix: np.ndarray,
+        EPSILON: float = 0.0001) -> np.ndarray:
+    if transition_matrix.shape[0] != transition_matrix.shape[1]:
+            raise ValueError('Transition matrix is not squared.')
+    matrix = transition_matrix.copy()
+    matrix = np.nan_to_num(matrix)
+    matrix += EPSILON
+    aperiodic_irreducible_transition_matrix = (
+        matrix.T / np.sum(matrix, axis=1)).T
+    eigen_values, eigen_vectors = np.linalg.eig(
+        aperiodic_irreducible_transition_matrix.T)
+    print('\neigen_values:', eigen_values, '\neigen_vectors:', eigen_vectors)
+    index = np.where(eigen_values > 0.99)[0][0]
+    stationary_distribution = [item.real for item in eigen_vectors[:, index]]
+    stationary_distribution /= sum(stationary_distribution)
+    lambda2 = sorted(eigen_values, reverse=True)[1]
+    pie_star = np.min(stationary_distribution)
+    print("\nlambda2:", lambda2, "\npie_star:", pie_star)
+    EPSILON = 0.6
+    return [(1/(2*np.log(2*EPSILON))) * (lambda2 / (1-lambda2)),
+            (1/(1-lambda2))*np.log(1/pie_star*EPSILON)]
 
 
 def randomize_network(
