@@ -10,6 +10,7 @@ from __future__ import absolute_import
 
 from typing import Dict
 from typing import List
+from typing import Union
 from typing import Set
 from typing import Tuple
 import itertools
@@ -20,10 +21,12 @@ import networkx as nx
 import math
 import matplotlib.pyplot as plt
 import seaborn as sns
+import enforce
 
 import utils
 
 
+@enforce.runtime_validation
 def extract_graphs(
         edge_list: pd.DataFrame,
         weeks: int = 4,
@@ -78,7 +81,9 @@ def extract_graphs(
     return dgraphs
 
 
-def get_metrics_for_network(dgraph: nx.graph) -> Dict[str, int]:
+# @enforce.runtime_validation
+def get_metrics_for_network(
+        dgraph: nx.DiGraph) -> Dict[str, Union[float, int]]:
     """Gets the different metrics of the given directed network.
 
     Args:
@@ -170,6 +175,7 @@ def get_metrics_for_network(dgraph: nx.graph) -> Dict[str, int]:
     return metrics
 
 
+@enforce.runtime_validation
 def cartwright_harary_balance(dgraph: nx.DiGraph) -> float:
     """Computes the cartwright and harary balance ratio.
 
@@ -204,6 +210,7 @@ def cartwright_harary_balance(dgraph: nx.DiGraph) -> float:
     return balance_ratio
 
 
+@enforce.runtime_validation
 def count_different_signed_edges(dgraph):
     different_signs = 0
     nodes = list(dgraph.nodes())
@@ -220,6 +227,7 @@ def count_different_signed_edges(dgraph):
     return different_signs
 
 
+@enforce.runtime_validation
 def compute_edge_balance(
         dgraph: nx.DiGraph,
         no_isomorph_cycles: bool = False) -> Dict[tuple, Dict[str, int]]:
@@ -281,7 +289,7 @@ def compute_edge_balance(
                         balanced_count += 1
 
         if triad_count:
-            as_expected_sign = (np.sign(weight_sum) == np.sign(xij))
+            as_expected_sign = int(np.sign(weight_sum) == np.sign(xij))
             edge_balance[edge] = {
                 '#balanced': balanced_count,
                 '#cycle3': triad_count,
@@ -290,6 +298,7 @@ def compute_edge_balance(
     return edge_balance
 
 
+@enforce.runtime_validation
 def plot_evolving_graphs(
         dgraphs: List[nx.DiGraph],
         titles: List[str] = None,
@@ -329,9 +338,10 @@ def plot_evolving_graphs(
             title_name, len(dgraph.nodes()), len(dgraph.edges())))
 
 
+@enforce.runtime_validation
 def compute_fairness_goodness(
         dgraph: nx.DiGraph,
-        weight_range: float = 20,
+        weight_range: float = 20.0,
         max_iteration: int = 100,
         verbose: bool = True) -> Dict[str, Dict[int, float]]:
     """Computes fairness and goodness per node in a weighted signed graph.
@@ -405,6 +415,7 @@ def compute_fairness_goodness(
     return {'fairness': fairness, 'goodness': goodness}
 
 
+@enforce.runtime_validation
 def is_transitive_balanced(triad: np.ndarray) -> bool:
     """Checks whether input triad matrix is transitively balanced or not.
 
@@ -442,6 +453,7 @@ def is_transitive_balanced(triad: np.ndarray) -> bool:
     return True
 
 
+@enforce.runtime_validation
 def _get_all_triad_permutations(triad_matrix: np.ndarray) -> Set[str]:
     """Gets all of permutations of nodes in a matrix in string format.
 
@@ -474,6 +486,7 @@ def _get_all_triad_permutations(triad_matrix: np.ndarray) -> Set[str]:
     return result
 
 
+@enforce.runtime_validation
 def generate_all_possible_sparse_triads(
         ) -> Tuple[Dict[str, int], List[np.ndarray]]:
     """Generates all possible sparse triads.
@@ -509,6 +522,7 @@ def generate_all_possible_sparse_triads(
     return triad_map, triad_list
 
 
+@enforce.runtime_validation
 def _detect_triad_type_for_all_subgraph3(
         dgraph: nx.DiGraph,
         triad_map: Dict[str, int] = None,
@@ -532,12 +546,13 @@ def _detect_triad_type_for_all_subgraph3(
         triad_map, _ = generate_all_possible_sparse_triads()
     subgraph2triad_type = {}
     nodes_list = np.array(dgraph.nodes())
-    adj_matrix = nx.adjacency_matrix(dgraph).todense()
+    adj_matrix = np.array(nx.adjacency_matrix(dgraph).todense())
     adj_matrix[adj_matrix > 0] = 1
     adj_matrix[adj_matrix < 0] = -1
     triads = list(itertools.combinations(range(len(nodes_list)), 3))
     for triad in triads:
-        triad_subgraph_matrix = utils.sub_adjacency_matrix(adj_matrix, triad)
+        triad_subgraph_matrix = utils.sub_adjacency_matrix(
+            adj_matrix, list(triad))
         triad_subgraph_key = str(np.array(triad_subgraph_matrix, dtype=int))
         if triad_subgraph_key not in triad_map:
             print(triad, 'is not found.')
@@ -554,11 +569,13 @@ def _detect_triad_type_for_all_subgraph3(
     return subgraph2triad_type
 
 
+@enforce.runtime_validation
 def compute_transition_matrix(
         dgraphs: List[nx.DiGraph],
         unique_triad_num: int,
         triad_map: Dict[str, int] = None,
-        verbose: bool = False) -> Dict[str, object]:
+        verbose: bool = False) -> Dict[
+                                    str, Union[List[np.ndarray], List[Dict]]]:
     """Computes transition matrix and triads count for every consequetive graph.
 
     Args:
@@ -609,15 +626,21 @@ def compute_transition_matrix(
             'triads_types': triads_types}
 
 
+@enforce.runtime_validation
 def get_stationary_distribution(
         transition_matrix: np.ndarray,
-        EPSILON: float = 0.0001) -> np.ndarray:
+        aperiodic_irreducible_eps: float = 0.0001) -> np.ndarray:
     """Gets the stationary distribution of given transition matrix.
 
-    Args:
-        transition_matrix: Given square matrix.
+    A Markov chain is irreducible if we can go from any state to any state.
+    This entails all transition probabilities > 0.
+    A Markov chain is aperiodic if all states are accessible from all other
+    states. This entails all transition probabilities > 0.
 
-        EPSILON: Small value to add to the matrix to make it irreducible.
+    Args:
+        transition_matrix: Square Markov transition matrix.
+
+        aperiodic_irreducible_eps: To make the matrix aperiodic/irreducible.
 
     Returns:
         Array of size one dimension of matrix.
@@ -629,7 +652,7 @@ def get_stationary_distribution(
         raise ValueError('Transition matrix is not squared.')
     matrix = transition_matrix.copy()
     matrix = np.nan_to_num(matrix)
-    matrix += EPSILON
+    matrix += aperiodic_irreducible_eps
     aperiodic_irreducible_transition_matrix = (
         matrix.T / np.sum(matrix, axis=1)).T
     eigen_values, eigen_vectors = np.linalg.eig(
@@ -640,30 +663,52 @@ def get_stationary_distribution(
     return stationary_distribution
 
 
+@enforce.runtime_validation
 def get_mixing_time_range(
         transition_matrix: np.ndarray,
-        EPSILON: float = 0.0001) -> np.ndarray:
+        aperiodic_irreducible_eps: float = 0.0001,
+        distance_from_stationary_eps: float = 0.01) -> np.float64:
+    """Gets the mixing time with respect to given distance eps.
+
+    For more information one can look at:
+    https://www.math.dartmouth.edu/~pw/M100W11/nathan.pdf
+    and
+    https://math.dartmouth.edu/~pw/math100w13/kale.pdf
+    Argument distance_from_stationary_eps is eps in the document of the
+    first link.
+
+    Args:
+        transition_matrix: Square Markov transition matrix.
+
+        aperiodic_irreducible_eps: To make the matrix aperiodic/irreducible.
+
+        distance_from_stationary_eps: Distance from stationary distribution
+
+    Returns:
+        Number of steps in float type.
+
+    Raises:
+        None.
+    """
     if transition_matrix.shape[0] != transition_matrix.shape[1]:
-            raise ValueError('Transition matrix is not squared.')
+        raise ValueError('Transition matrix is not squared.')
     matrix = transition_matrix.copy()
     matrix = np.nan_to_num(matrix)
-    matrix += EPSILON
+    matrix += distance_from_stationary_eps
     aperiodic_irreducible_transition_matrix = (
         matrix.T / np.sum(matrix, axis=1)).T
     eigen_values, eigen_vectors = np.linalg.eig(
         aperiodic_irreducible_transition_matrix.T)
-    print('\neigen_values:', eigen_values, '\neigen_vectors:', eigen_vectors)
     index = np.where(eigen_values > 0.99)[0][0]
     stationary_distribution = [item.real for item in eigen_vectors[:, index]]
     stationary_distribution /= sum(stationary_distribution)
     lambda2 = sorted(eigen_values, reverse=True)[1]
     pie_star = np.min(stationary_distribution)
-    print("\nlambda2:", lambda2, "\npie_star:", pie_star)
-    EPSILON = 0.6
-    return [(1/(2*np.log(2*EPSILON))) * (lambda2 / (1-lambda2)),
-            (1/(1-lambda2))*np.log(1/pie_star*EPSILON)]
+    tau = (1/(1-lambda2)) * np.log(1/(pie_star*distance_from_stationary_eps))
+    return tau
 
 
+@enforce.runtime_validation
 def randomize_network(
         dgraph: nx.DiGraph,
         switching_count_coef: int = 300) -> nx.DiGraph:
@@ -753,9 +798,10 @@ def randomize_network(
                 raise Exception('Not converged.')
             else:
                 prev_switching_count = switching_count
-    return nx.from_numpy_matrix(adj, create_using=nx.MultiDiGraph())
+    return nx.from_numpy_matrix(adj, create_using=nx.DiGraph())
 
 
+@enforce.runtime_validation
 def compute_randomized_transition_matrix(
         dgraph1: nx.DiGraph,
         dgraph2: nx.DiGraph,

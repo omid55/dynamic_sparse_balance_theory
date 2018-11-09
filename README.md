@@ -1,2 +1,2 @@
-# dynamic_sparse_balance_theory
+# dynamic sparse balance theory study
 Project to study dynamic balance theory in realistic sparse longitudinal datasets

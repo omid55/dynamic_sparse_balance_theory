@@ -286,11 +286,11 @@ class MyTestClass(unittest.TestCase):
     def test_compute_fairness_goodness(self):
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3, 4])
-        dg.add_edge(1, 2, weight=1)
-        dg.add_edge(2, 3, weight=1)
-        dg.add_edge(3, 1, weight=1)
-        dg.add_edge(1, 4, weight=2)
-        dg.add_edge(4, 3, weight=-1)
+        dg.add_edge(1, 2, weight=1.0)
+        dg.add_edge(2, 3, weight=1.0)
+        dg.add_edge(3, 1, weight=1.0)
+        dg.add_edge(1, 4, weight=2.0)
+        dg.add_edge(4, 3, weight=-1.0)
         expected = {'fairness': {1: 1.0, 2: 0.95, 3: 1.0, 4: 0.95},
                     'goodness': {1: 1.0, 2: 1.0, 3: 0.0, 4: 2.0}}
         computed = network_utils.compute_fairness_goodness(dg, verbose=False)
@@ -540,7 +540,7 @@ class MyTestClass(unittest.TestCase):
              [0, 0, 1]], dtype=float)
         expected = np.array([0, 0, 1])
         computed = network_utils.get_stationary_distribution(
-            transition_matrix, EPSILON=0.0)
+            transition_matrix, aperiodic_irreducible_eps=0.0)
         np.testing.assert_array_almost_equal(expected, computed, decimal=4)
 
     def test_get_stationary_distribution_full_matrix(self):
@@ -550,7 +550,7 @@ class MyTestClass(unittest.TestCase):
              [0.2, 0.2, 0.6]], dtype=float)
         expected = np.array([0.2759, 0.3448, 0.3793])
         computed = network_utils.get_stationary_distribution(
-            transition_matrix, EPSILON=0.0)
+            transition_matrix, aperiodic_irreducible_eps=0.0)
         np.testing.assert_array_almost_equal(expected, computed, decimal=4)
 
     def test_get_stationary_distribution_not_row_stochastic(self):
@@ -560,7 +560,7 @@ class MyTestClass(unittest.TestCase):
              [1, 0, 3]], dtype=float)
         expected = np.array([0.3571, 0.1191, 0.5238])
         computed = network_utils.get_stationary_distribution(
-            transition_matrix, EPSILON=0.0001)
+            transition_matrix, aperiodic_irreducible_eps=0.0001)
         np.testing.assert_array_almost_equal(expected, computed, decimal=4)
 
     def test_get_stationary_distribution(self):
@@ -570,21 +570,23 @@ class MyTestClass(unittest.TestCase):
              [0.25, 0, 0.75]], dtype=float)
         expected = np.array([0.3571, 0.1191, 0.5238])
         computed = network_utils.get_stationary_distribution(
-            transition_matrix, EPSILON=0.0001)
+            transition_matrix, aperiodic_irreducible_eps=0.0001)
         np.testing.assert_array_almost_equal(expected, computed, decimal=4)
 
-    # # =========================================================================
-    # # ====================== get_mixing_time_range ============================
-    # # =========================================================================
-    # def test_get_mixing_time_range(self):
-    #     transition_matrix = np.array(
-    #         [[0, 0, 0],
-    #          [0.9, 0, 0.1],
-    #          [0.25, 0, 0.75]], dtype=float)
-    #     expected = []
-    #     computed = network_utils.get_mixing_time_range(
-    #         transition_matrix, EPSILON=0.0001)
-    #     self.assertEqual(expected, computed)
+    # =========================================================================
+    # ====================== get_mixing_time_range ============================
+    # =========================================================================
+    def test_get_mixing_time_range(self):
+        transition_matrix = np.array(
+            [[0, 0, 0],
+             [0.9, 0, 0.1],
+             [0.25, 0, 0.75]], dtype=float)
+        expected = 13.1877
+        computed = network_utils.get_mixing_time_range(
+            transition_matrix,
+            aperiodic_irreducible_eps=0.0001,
+            distance_from_stationary_eps=0.01)
+        self.assertEqual(np.round(expected, 4), np.round(computed, 4))
 
     # =========================================================================
     # ====================== randomize_network ================================

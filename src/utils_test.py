@@ -10,11 +10,11 @@ import pandas as pd
 import numpy as np
 import sys
 import os
-import utils
 import networkx as nx
 import matplotlib.pyplot as plt
 import unittest
-import shelve
+
+import utils
 
 
 class MyTestClass(unittest.TestCase):
