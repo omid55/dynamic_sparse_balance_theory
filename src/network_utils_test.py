@@ -487,10 +487,10 @@ class MyTestClass(unittest.TestCase):
         dg2 = nx.DiGraph()
         dg2.add_nodes_from([1, 2, 3, 4])
         dg2.add_edge(1, 2, weight=1)
+        dg2.add_edge(1, 3, weight=1)
         dg2.add_edge(2, 1, weight=1)
         dg2.add_edge(2, 3, weight=1)
-        dg2.add_edge(3, 2, weight=1)
-        dg2.add_edge(1, 3, weight=1)
+        dg2.add_edge(2, 4, weight=1)
         dg2.add_edge(3, 1, weight=1)
         dg2.add_edge(3, 4, weight=1)
         dg2.add_edge(4, 1, weight=1)
@@ -500,16 +500,16 @@ class MyTestClass(unittest.TestCase):
                  '(1, 2, 4)': 6,
                  '(1, 3, 4)': 4,
                  '(2, 3, 4)': 8},
-                {'(1, 2, 3)': 122,
-                 '(1, 2, 4)': 42,
+                {'(1, 2, 3)': 63,
+                 '(1, 2, 4)': 57,
                  '(1, 3, 4)': 57,
-                 '(2, 3, 4)': 9}]
+                 '(2, 3, 4)': 22}]
         n = len(self.triad_list)
         transition_matrix = np.zeros((n, n))
-        transition_matrix[76, 122] = 1
-        transition_matrix[6, 42] = 1
+        transition_matrix[76, 63] = 1
+        transition_matrix[6, 57] = 1
         transition_matrix[4, 57] = 1
-        transition_matrix[8, 9] = 1
+        transition_matrix[8, 22] = 1
         computed = network_utils.compute_transition_matrix(
             dgraphs=dgraphs,
             unique_triad_num=n,
@@ -581,7 +581,7 @@ class MyTestClass(unittest.TestCase):
             [[0, 0, 0],
              [0.9, 0, 0.1],
              [0.25, 0, 0.75]], dtype=float)
-        expected = 13.1877
+        expected = 13.7081
         computed = network_utils.get_mixing_time_range(
             transition_matrix,
             aperiodic_irreducible_eps=0.0001,

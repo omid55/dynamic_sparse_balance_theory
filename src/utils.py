@@ -17,10 +17,10 @@ import matplotlib.pyplot as plt
 import pickle as pk
 import networkx as nx
 import shelve
-import enforce
+# import enforce
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def print_dict_pretty(input_dict: Dict) -> None:
     """Prints the input dictionary line by line and key sorted.
 
@@ -38,7 +38,7 @@ def print_dict_pretty(input_dict: Dict) -> None:
         print('{}: {}'.format(key, input_dict[key]))
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def check_required_columns(
         data: pd.DataFrame, columns: List[str]) -> None:
     """Checks whether input dataframe includes all required columns.
@@ -60,7 +60,7 @@ def check_required_columns(
             ', '.join(map(str, missing_columns))))
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def graph_equals(g1: nx.DiGraph, g2: nx.DiGraph) -> bool:
     """Checks if two graphs are equal.
 
@@ -80,7 +80,7 @@ def graph_equals(g1: nx.DiGraph, g2: nx.DiGraph) -> bool:
     return g1.nodes() == g2.nodes() and g1.edges() == g2.edges()
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def sub_adjacency_matrix(
         adj_matrix: np.ndarray,
         rows: List[int]) -> np.ndarray:
@@ -100,7 +100,7 @@ def sub_adjacency_matrix(
     return adj_matrix[np.ix_(rows, rows)]
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def swap_nodes_in_matrix(
         matrix: np.ndarray,
         node1: int,
@@ -126,7 +126,7 @@ def swap_nodes_in_matrix(
     return result
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def make_matrix_row_stochastic(matrix: np.ndarray) -> np.ndarray:
     """Makes the matrix row-stochastic (sum of each row is 1)
 
@@ -142,7 +142,7 @@ def make_matrix_row_stochastic(matrix: np.ndarray) -> np.ndarray:
     return np.nan_to_num(matrix.T / np.sum(matrix, axis=1)).T
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def fully_savefig(
         fig_object: matplotlib.figure.Figure,
         file_path: str) -> None:
@@ -172,7 +172,7 @@ def fully_savefig(
         pk.dump(fig_object, handle, protocol=pk.HIGHEST_PROTOCOL)
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def fully_loadfig(file_path: str) -> matplotlib.figure.Figure:
     """Fully loads the saved figure to be able to be modified.
 
@@ -193,7 +193,7 @@ def fully_loadfig(file_path: str) -> matplotlib.figure.Figure:
     return fig_object
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def save_all_variables_of_current_session(
         locals_: dict,
         file_path: str) -> None:
@@ -216,15 +216,22 @@ def save_all_variables_of_current_session(
     my_shelf = shelve.open(file_path, 'n')
     # for key in dir():
     for key, value in locals_.items():
-        if not key.startswith('__') and key != 'self':
+        if (
+                not key.startswith('__') and
+                not key.startswith('_') and
+                key != 'self' and
+                key != 'exit' and
+                str(type(value)) != "<class 'module'>" and
+                str(type(value)) != "<class 'method'>"):
             try:
+                # print('key: ', key)
                 my_shelf[key] = value  # globals()[key]
             except TypeError:
                 print('ERROR shelving: {0}'.format(key))
     my_shelf.close()
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def load_all_variables_of_saved_session(
         globals_: dict,
         file_path: str) -> None:

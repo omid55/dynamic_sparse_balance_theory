@@ -21,12 +21,12 @@ import networkx as nx
 import math
 import matplotlib.pyplot as plt
 import seaborn as sns
-import enforce
+# import enforce
 
 import utils
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def extract_graphs(
         edge_list: pd.DataFrame,
         weeks: int = 4,
@@ -81,7 +81,7 @@ def extract_graphs(
     return dgraphs
 
 
-# @enforce.runtime_validation
+# # @enforce.runtime_validation
 def get_metrics_for_network(
         dgraph: nx.DiGraph) -> Dict[str, Union[float, int]]:
     """Gets the different metrics of the given directed network.
@@ -175,7 +175,7 @@ def get_metrics_for_network(
     return metrics
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def cartwright_harary_balance(dgraph: nx.DiGraph) -> float:
     """Computes the cartwright and harary balance ratio.
 
@@ -210,7 +210,7 @@ def cartwright_harary_balance(dgraph: nx.DiGraph) -> float:
     return balance_ratio
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def count_different_signed_edges(dgraph):
     different_signs = 0
     nodes = list(dgraph.nodes())
@@ -227,7 +227,7 @@ def count_different_signed_edges(dgraph):
     return different_signs
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def compute_edge_balance(
         dgraph: nx.DiGraph,
         no_isomorph_cycles: bool = False) -> Dict[tuple, Dict[str, int]]:
@@ -298,7 +298,7 @@ def compute_edge_balance(
     return edge_balance
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def plot_evolving_graphs(
         dgraphs: List[nx.DiGraph],
         titles: List[str] = None,
@@ -338,7 +338,7 @@ def plot_evolving_graphs(
             title_name, len(dgraph.nodes()), len(dgraph.edges())))
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def compute_fairness_goodness(
         dgraph: nx.DiGraph,
         weight_range: float = 20.0,
@@ -415,7 +415,7 @@ def compute_fairness_goodness(
     return {'fairness': fairness, 'goodness': goodness}
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def is_transitive_balanced(triad: np.ndarray) -> bool:
     """Checks whether input triad matrix is transitively balanced or not.
 
@@ -453,7 +453,7 @@ def is_transitive_balanced(triad: np.ndarray) -> bool:
     return True
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def _get_all_triad_permutations(triad_matrix: np.ndarray) -> Set[str]:
     """Gets all of permutations of nodes in a matrix in string format.
 
@@ -486,7 +486,7 @@ def _get_all_triad_permutations(triad_matrix: np.ndarray) -> Set[str]:
     return result
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def generate_all_possible_sparse_triads(
         ) -> Tuple[Dict[str, int], List[np.ndarray]]:
     """Generates all possible sparse triads.
@@ -522,7 +522,7 @@ def generate_all_possible_sparse_triads(
     return triad_map, triad_list
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def _detect_triad_type_for_all_subgraph3(
         dgraph: nx.DiGraph,
         triad_map: Dict[str, int] = None,
@@ -569,7 +569,7 @@ def _detect_triad_type_for_all_subgraph3(
     return subgraph2triad_type
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def compute_transition_matrix(
         dgraphs: List[nx.DiGraph],
         unique_triad_num: int,
@@ -626,7 +626,41 @@ def compute_transition_matrix(
             'triads_types': triads_types}
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
+def _get_eigen_decomposition_of_markov_transition(
+        transition_matrix: np.ndarray,
+        aperiodic_irreducible_eps: float = 0.0001) -> Tuple:
+    """Gets the eigen value and vectors from transition matrix.
+
+    A Markov chain is irreducible if we can go from any state to any state.
+    This entails all transition probabilities > 0.
+    A Markov chain is aperiodic if all states are accessible from all other
+    states. This entails all transition probabilities > 0.
+
+    Args:
+        transition_matrix: Square Markov transition matrix.
+
+        aperiodic_irreducible_eps: To make the matrix aperiodic/irreducible.
+
+    Returns:
+        Dictionary of eigen val/vec of irreducible and aperiodic markov chain.
+
+    Raises:
+        ValueError: If the matrix was not squared.
+    """
+    if transition_matrix.shape[0] != transition_matrix.shape[1]:
+        raise ValueError('Transition matrix is not squared.')
+    matrix = transition_matrix.copy()
+    matrix = np.nan_to_num(matrix)
+    matrix += aperiodic_irreducible_eps
+    aperiodic_irreducible_transition_matrix = (
+        matrix.T / np.sum(matrix, axis=1)).T
+    eigen_values, eigen_vectors = np.linalg.eig(
+        aperiodic_irreducible_transition_matrix.T)
+    return eigen_values, eigen_vectors
+
+
+# @enforce.runtime_validation
 def get_stationary_distribution(
         transition_matrix: np.ndarray,
         aperiodic_irreducible_eps: float = 0.0001) -> np.ndarray:
@@ -648,26 +682,22 @@ def get_stationary_distribution(
     Raises:
         ValueError: If the matrix was not squared.
     """
-    if transition_matrix.shape[0] != transition_matrix.shape[1]:
-        raise ValueError('Transition matrix is not squared.')
-    matrix = transition_matrix.copy()
-    matrix = np.nan_to_num(matrix)
-    matrix += aperiodic_irreducible_eps
-    aperiodic_irreducible_transition_matrix = (
-        matrix.T / np.sum(matrix, axis=1)).T
-    eigen_values, eigen_vectors = np.linalg.eig(
-        aperiodic_irreducible_transition_matrix.T)
+    eigen_values, eigen_vectors = (
+        _get_eigen_decomposition_of_markov_transition(
+            transition_matrix=transition_matrix,
+            aperiodic_irreducible_eps=aperiodic_irreducible_eps))
     index = np.where(eigen_values > 0.99)[0][0]
     stationary_distribution = [item.real for item in eigen_vectors[:, index]]
     stationary_distribution /= sum(stationary_distribution)
     return stationary_distribution
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def get_mixing_time_range(
         transition_matrix: np.ndarray,
         aperiodic_irreducible_eps: float = 0.0001,
-        distance_from_stationary_eps: float = 0.01) -> np.float64:
+        distance_from_stationary_eps: float = 0.01,
+        verbose: bool = False) -> np.float64:
     """Gets the mixing time with respect to given distance eps.
 
     For more information one can look at:
@@ -682,33 +712,33 @@ def get_mixing_time_range(
 
         aperiodic_irreducible_eps: To make the matrix aperiodic/irreducible.
 
-        distance_from_stationary_eps: Distance from stationary distribution
+        distance_from_stationary_eps: Distance from stationary distribution.
+
+        verbose: Whether we need it to print about lambda2 and pie_star.
 
     Returns:
         Number of steps in float type.
 
     Raises:
-        None.
+        ValueError: If the matrix was not squared.
     """
-    if transition_matrix.shape[0] != transition_matrix.shape[1]:
-        raise ValueError('Transition matrix is not squared.')
-    matrix = transition_matrix.copy()
-    matrix = np.nan_to_num(matrix)
-    matrix += distance_from_stationary_eps
-    aperiodic_irreducible_transition_matrix = (
-        matrix.T / np.sum(matrix, axis=1)).T
-    eigen_values, eigen_vectors = np.linalg.eig(
-        aperiodic_irreducible_transition_matrix.T)
+    eigen_values, eigen_vectors = (
+        _get_eigen_decomposition_of_markov_transition(
+            transition_matrix=transition_matrix,
+            aperiodic_irreducible_eps=aperiodic_irreducible_eps))
     index = np.where(eigen_values > 0.99)[0][0]
     stationary_distribution = [item.real for item in eigen_vectors[:, index]]
     stationary_distribution /= sum(stationary_distribution)
     lambda2 = sorted(eigen_values, reverse=True)[1]
     pie_star = np.min(stationary_distribution)
+    if verbose:
+        print('\nlambda2: {}\npie_star: {}'.format(
+            np.real(lambda2), pie_star))
     tau = (1/(1-lambda2)) * np.log(1/(pie_star*distance_from_stationary_eps))
-    return tau
+    return np.real(tau)
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def randomize_network(
         dgraph: nx.DiGraph,
         switching_count_coef: int = 300) -> nx.DiGraph:
@@ -801,7 +831,7 @@ def randomize_network(
     return nx.from_numpy_matrix(adj, create_using=nx.DiGraph())
 
 
-@enforce.runtime_validation
+# @enforce.runtime_validation
 def compute_randomized_transition_matrix(
         dgraph1: nx.DiGraph,
         dgraph2: nx.DiGraph,
