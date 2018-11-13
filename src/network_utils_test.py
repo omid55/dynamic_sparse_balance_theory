@@ -645,6 +645,36 @@ class MyTestClass(unittest.TestCase):
             sorted(dict(dg.degree()).values()),
             sorted(dict(computed.degree()).values()))
 
+    # =========================================================================
+    # ==== get_robustness_of_stationary_distribution_in_periods ===============
+    # =========================================================================
+    def test_get_robustness_of_stationary_distribution_in_periods(self):
+        transition_matrices = [
+            np.array([[0.9, 0.1, 0], [0.6, 0.2, 0.2], [0.7, 0.1, 0.2]]),
+            np.array([[0.1, 0.8, 0.1], [0, 0.9, 0.1], [0.1, 0.1, 0.8]])
+        ]
+        expected_df = pd.DataFrame({
+            'Transitions': ['Period 1 to Period 2', 'Period 2 to Period 3'],
+            'L2-Norm Distance': [0.5833, 0.4404],
+            'Pearson r-val': [0.4637, 0.1319],
+            'Pearson p-val': [0.6930, 0.9156]
+            },
+            columns=[
+                'Transitions',
+                'L2-Norm Distance',
+                'Pearson r-val',
+                'Pearson p-val'])
+        expected_sds = np.array([
+            np.array([0.8609, 0.1112, 0.0279]),
+            np.array([0.0371, 0.6295, 0.3333])])
+        computed_df, computed_sds = (
+            network_utils.get_robustness_of_stationary_distribution_in_periods(
+                transition_matrices, lnorm=2))
+        pd.testing.assert_frame_equal(
+            expected_df, computed_df, check_less_precise=3)
+        np.testing.assert_array_almost_equal(
+            expected_sds, computed_sds, decimal=4)
+
 
 if __name__ == '__main__':
     unittest.main()

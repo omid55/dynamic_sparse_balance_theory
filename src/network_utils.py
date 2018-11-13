@@ -15,6 +15,7 @@ from typing import Set
 from typing import Tuple
 import itertools
 import numpy as np
+import scipy as sp
 import pandas as pd
 import datetime
 import networkx as nx
@@ -875,3 +876,69 @@ def compute_randomized_transition_matrix(
                 unique_triad_num=unique_triad_num,
                 triad_map=triad_map)['transition_matrices'][0])
     return rand_transition_matrices
+
+
+# @enforce.runtime_validation
+def get_robustness_of_stationary_distribution_in_periods(
+        transition_matrices: List[np.ndarray],
+        lnorm: int = 2) -> Tuple[pd.DataFrame, np.ndarray]:
+    """Gets stationary dist of each transition and dist/corr with average one.
+
+    Args:
+        transition_matrices: List of squared transition matrices.
+
+        lnorm: The norm integer (l1 or l2 usually).
+
+    We compute the average transition matrix from all given transition matrices
+    and then compute the stationary distribution for that matrix. Then the
+    objective is to find out how different/robust all transitions are with
+    respect to the stationary distribution from average transtision matrix. We
+    compute lnorm distance and also Pearson correlation of them with average
+    distribution. Also it returns the list of stationary distributions.
+
+    Returns:
+        Dataframe of distance and Pearons correlation from average transition.
+
+    Raises:
+        None.
+    """
+    n, _ = transition_matrices[0].shape
+    average_transition_matrix = np.zeros((n, n))
+    for i in range(len(transition_matrices)):
+        average_transition_matrix += transition_matrices[i]
+    average_transition_matrix /= n
+
+    result = []
+    stationary_distributions = []
+    mean_stationary_distribution = get_stationary_distribution(
+        average_transition_matrix)
+
+    for index, transition_matrix in enumerate(transition_matrices):
+        stationary_dist = get_stationary_distribution(transition_matrix)
+        stationary_distributions.append(stationary_dist)
+
+        distance = np.linalg.norm(
+            mean_stationary_distribution - stationary_dist, lnorm)
+        rval, pval = sp.stats.pearsonr(
+            mean_stationary_distribution, stationary_dist)
+        result.append(
+            ['Period {} to Period {}'.format(index+1, index+2),
+                distance,
+                rval,
+                pval])
+
+    result = pd.DataFrame(result, columns=[
+        'Transitions',
+        'L{}-Norm Distance'.format(lnorm),
+        'Pearson r-val',
+        'Pearson p-val'])
+
+    # for stationary_distribution in stationary_distributions:
+    #     plt.plot(stationary_distribution)
+
+    # plt.errorbar(
+    #     range(n), np.mean(stationary_distributions, axis=0),
+    #     yerr=np.std(stationary_distributions/np.sqrt(
+    #             len(transition_matrices)), axis=0), fmt='.')
+
+    return result, stationary_distributions

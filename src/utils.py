@@ -196,7 +196,8 @@ def fully_loadfig(file_path: str) -> matplotlib.figure.Figure:
 # @enforce.runtime_validation
 def save_all_variables_of_current_session(
         locals_: dict,
-        file_path: str) -> None:
+        file_path: str,
+        verbose: bool = False) -> None:
     """Saves all defined variables in the current session to be used later.
 
     It works similar to save_all in MATLAB. It is super useful when one is
@@ -205,7 +206,10 @@ def save_all_variables_of_current_session(
 
     Args:
         locals_: Just call this as the first parameter ALWAYS: locals()
+
         file_path: String file path (with extension).
+
+        verbose: Whether to print the name of variables it is saving.
 
     Returns:
         None.
@@ -216,18 +220,17 @@ def save_all_variables_of_current_session(
     my_shelf = shelve.open(file_path, 'n')
     # for key in dir():
     for key, value in locals_.items():
-        if (
-                not key.startswith('__') and
-                not key.startswith('_') and
-                key != 'self' and
-                key != 'exit' and
-                str(type(value)) != "<class 'module'>" and
-                str(type(value)) != "<class 'method'>"):
+        if (not key.startswith('__') and
+            not key.startswith('_') and
+                key not in ['self', 'exit', 'Out', 'quit', 'imread'] and
+                str(type(value)) not in [
+                    "<class 'module'>", "<class 'method'>"]):
             try:
-                # print('key: ', key)
-                my_shelf[key] = value  # globals()[key]
+                if verbose:
+                    print('key: ', key)
+                my_shelf[key] = value
             except TypeError:
-                print('ERROR shelving: {0}'.format(key))
+                print('Just this variable was not saved: {0}'.format(key))
     my_shelf.close()
 
 
