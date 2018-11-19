@@ -104,7 +104,8 @@ def sub_adjacency_matrix(
 def swap_nodes_in_matrix(
         matrix: np.ndarray,
         node1: int,
-        node2: int) -> np.ndarray:
+        node2: int,
+        inplace: bool = False) -> np.ndarray:
     """Swaps two nodes in a matrix and return the resulting matrix.
 
     Args:
@@ -120,10 +121,13 @@ def swap_nodes_in_matrix(
     Raises:
         None.
     """
-    result = np.copy(matrix)
-    result[:, [node1, node2]] = result[:, [node2, node1]]
-    result[[node1, node2], :] = result[[node2, node1], :]
-    return result
+    if not inplace:
+        modified_matrix = np.copy(matrix)
+    else:
+        modified_matrix = matrix
+    modified_matrix[:, [node1, node2]] = modified_matrix[:, [node2, node1]]
+    modified_matrix[[node1, node2], :] = modified_matrix[[node2, node1], :]
+    return modified_matrix
 
 
 # @enforce.runtime_validation
@@ -255,5 +259,119 @@ def load_all_variables_of_saved_session(
     """
     my_shelf = shelve.open(file_path)
     for key in my_shelf:
-        globals_[key] = my_shelf[key]
+        try:
+            globals_[key] = my_shelf[key]
+        except AttributeError:
+            print('Just this variable was not loaded: ', key)
     my_shelf.close()
+
+
+def swap_two_elements_in_matrix(
+        matrix: np.ndarray,
+        x1: int,
+        y1: int,
+        x2: int,
+        y2: int,
+        inplace: bool = True) -> np.ndarray:
+    """Swaps the content of two given elements from the matrix.
+
+    Args:
+
+    Returns:
+
+    Raises:
+        ValueError: If any of coordinates did not exist.
+    """
+    n, m = matrix.shape
+    if ((x1 < 0 or x1 >= n) or
+            (x2 < 0 or x2 >= n) or
+            (y1 < 0 or y1 >= m) or
+            (y2 < 0 or y2 >= m)):
+        raise ValueError(
+            'Given coordinates do not fall into matrix dimensions.'
+            ' Matrix size: ({}, {}), Coordinates: ({}, {}), ({}, {}).'.format(
+                n, m, x1, y1, x2, y2))
+    if not inplace:
+        modified_matrix = matrix.copy()
+    else:
+        modified_matrix = matrix
+    first_element_content = modified_matrix[x1, y1]
+    modified_matrix[x1, y1] = modified_matrix[x2, y2]
+    modified_matrix[x2, y2] = first_element_content
+    return modified_matrix
+
+
+# @enforce.runtime_validation
+def dgraph2adjacency(dgraph: nx.DiGraph) -> np.ndarray:
+    """Gets the dense adjancency matrix from the graph.
+
+    Args:
+        dgraph: Directed graph to compute its adjancency matrix.
+
+    Returns:
+        Adjacency matrix of the given dgraph in dense format (np.array(n * n)).
+
+    Raises:
+        None.
+    """
+    return np.array(nx.adjacency_matrix(dgraph).todense())
+
+
+# @enforce.runtime_validation
+def adjacency2digraph(
+        adj_matrix: np.ndarray,
+        similar_this_dgraph: nx.DiGraph = None) -> nx.DiGraph:
+    """Converts the adjacency matrix to directed graph.
+
+    If similar_this_graph is given, then the final directed graph has the same
+    node labeling as the given graph has.
+    Using dgraph2adjacency and then adjacency2digraph for the same dgraph is
+    very practical. Example:
+        adj = dgraph2adjacency(dgraph)
+        # Then modify adj as wish
+        new_dgraph = adjacency2digraph(adj, dgraph)
+        # Now new_dgraph has the same node labels as dgraph has before.
+
+    Args:
+        adj_matrix: Squared adjancency matrix.
+
+    Returns:
+        Directed graph with the adj_matrix and same node names as given dgraph.
+
+    Raises:
+        ValueError: If adj_matrix was not squared.
+    """
+    if adj_matrix.shape[0] != adj_matrix.shape[1]:
+        raise ValueError('Adjacency matrix is not squared.')
+
+    node_mapping = None
+    if similar_this_dgraph:
+        node_mapping = {
+            i: list(similar_this_dgraph.nodes())[i]
+            for i in range(similar_this_dgraph.number_of_nodes())}
+    return _adjacency2digraph_with_given_mapping(
+        adj_matrix=adj_matrix, node_mapping=node_mapping)
+
+
+# @enforce.runtime_validation
+def _adjacency2digraph_with_given_mapping(
+        adj_matrix: np.ndarray,
+        node_mapping: Dict = None) -> nx.DiGraph:
+    """Converts the adjacency matrix to directed graph.
+
+    Args:
+        adj_matrix: Squared adjancency matrix.
+
+        node_mapping: Dictionary for every node and their current and new name.
+
+    Returns:
+        Directed graph with the adj_matrix and same node names as given dgraph.
+
+    Raises:
+        ValueError: If adj_matrix was not squared.
+    """
+    if adj_matrix.shape[0] != adj_matrix.shape[1]:
+        raise ValueError('Adjacency matrix is not squared.')
+
+    new_dgrpah = nx.from_numpy_matrix(adj_matrix, create_using=nx.DiGraph())
+    return nx.relabel_nodes(new_dgrpah, mapping=node_mapping)

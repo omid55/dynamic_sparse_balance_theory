@@ -5,14 +5,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from io import StringIO
+import matplotlib.pyplot as plt
+import networkx as nx
 import pandas as pd
 import numpy as np
+import unittest
 import sys
 import os
-import networkx as nx
-import matplotlib.pyplot as plt
-import unittest
+from parameterized import parameterized
+from io import StringIO
 
 import utils
 
@@ -22,6 +23,14 @@ class MyTestClass(unittest.TestCase):
     def setUp(cls):
         cls.simple_dataframe = pd.DataFrame(
             {'col1': [1, 2], 'col2': [3, 4], 'col3': [5, 6]})
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(1, 3, weight=-1)
+        dg.add_edge(2, 3, weight=5)
+        dg.add_edge(3, 1, weight=-4)
+        dg.add_edge(4, 1, weight=2)
+        cls.sample_dgraph = dg
 
     @classmethod
     def tearDown(cls):
@@ -153,6 +162,78 @@ class MyTestClass(unittest.TestCase):
         self.assertEqual(expected_str_var, str_var)
         self.assertEqual(expected_list_var, list_var)
         os.remove(file_path)
+
+    # =========================================================================
+    # ==================== swap_two_elements_in_matrix ========================
+    # =========================================================================
+    @parameterized.expand([
+        ['InPlace', True],
+        ['NotInPlace', False]])
+    def test_swap_two_elements_in_matrix(self, name, inplace):
+        matrix = np.array(
+            [[0, 1, 2],
+             [3, 4, 5],
+             [6, 7, 8]])
+        expected = np.array(
+            [[0, 1, 3],
+             [2, 4, 5],
+             [6, 7, 8]])
+        original_matrix = matrix.copy()
+        computed = utils.swap_two_elements_in_matrix(
+            matrix=matrix, x1=0, y1=2, x2=1, y2=0, inplace=inplace)
+        np.testing.assert_array_equal(expected, computed)
+        if inplace:
+            self.assertEqual(matrix.all(), computed.all())
+        else:
+            self.assertEqual(matrix.all(), original_matrix.all())
+
+    # =========================================================================
+    # ==================== dgraph2adjacency ===================================
+    # =========================================================================
+    def test_dgraph2adjacency(self):
+        dg = self.sample_dgraph
+        expected = np.array(
+            [[0, 1, -1, 0],
+             [0, 0, 5, 0],
+             [-4, 0, 0, 0],
+             [2, 0, 0, 0]])
+        computed = utils.dgraph2adjacency(dg)
+        np.testing.assert_array_equal(expected, computed)
+
+    # =========================================================================
+    # ==================== adjacency2digraph ==================================
+    # =========================================================================
+    def test_adjacency2digraph(self):
+        dg = self.sample_dgraph
+        adj_matrix = utils.dgraph2adjacency(dg)
+        # We make another directed graph with the same adjacency matrix. Thus
+        #   the graphs should match.
+        computed_graph = utils.adjacency2digraph(
+            adj_matrix=adj_matrix, similar_this_dgraph=dg)
+        self.assertEqual(dg.nodes(), computed_graph.nodes())
+        self.assertEqual(dg.edges(), computed_graph.edges())
+        # Checking every edge weight.
+        for edge in dg.edges():
+            self.assertEqual(
+                dg.get_edge_data(edge[0], edge[1]),
+                computed_graph.get_edge_data(edge[0], edge[1]))
+
+    # =========================================================================
+    # ================ _adjacency2digraph_with_given_mapping ==================
+    # =========================================================================
+    def test_adjacency2digraph_with_given_mapping(self):
+        dg = self.sample_dgraph
+        adj_matrix = utils.dgraph2adjacency(dg)
+        node_mapping = {0: 1, 1: 2, 2: 3, 3: 4}
+        computed_graph = utils._adjacency2digraph_with_given_mapping(
+            adj_matrix=adj_matrix, node_mapping=node_mapping)
+        self.assertEqual(dg.nodes(), computed_graph.nodes())
+        self.assertEqual(dg.edges(), computed_graph.edges())
+        # Checking every edge weight.
+        for edge in dg.edges():
+            self.assertEqual(
+                dg.get_edge_data(edge[0], edge[1]),
+                computed_graph.get_edge_data(edge[0], edge[1]))
 
 
 if __name__ == '__main__':

@@ -5,13 +5,13 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import unittest
-from parameterized import parameterized
 import networkx as nx
 import pandas as pd
 import numpy as np
+import unittest
 import datetime
 import re
+from parameterized import parameterized
 
 import utils
 import network_utils
@@ -589,7 +589,7 @@ class MyTestClass(unittest.TestCase):
         self.assertEqual(np.round(expected, 4), np.round(computed, 4))
 
     # =========================================================================
-    # ====================== randomize_network ================================
+    # ====================== _randomize_network ===============================
     # =========================================================================
     def test_randomize_network_with_unweighted_graph(self):
         dg = nx.DiGraph()
@@ -604,10 +604,13 @@ class MyTestClass(unittest.TestCase):
         dg.add_edge(1, 6)
         dg.add_edge(6, 1)
         dg.add_edge(6, 5)
-        computed = network_utils.randomize_network(dg, switching_count_coef=2)
+        computed = network_utils._randomize_network(dg, switching_count_coef=2)
         self.assertEqual(
             sorted(dict(dg.degree()).values()),
             sorted(dict(computed.degree()).values()))
+        self.assertEqual(
+            sorted(dg.nodes()),
+            sorted(computed.nodes()))
 
     def test_randomize_network_with_all_positive_weighted_graph(self):
         dg = nx.DiGraph()
@@ -622,10 +625,13 @@ class MyTestClass(unittest.TestCase):
         dg.add_edge(1, 6, weight=9)
         dg.add_edge(6, 1, weight=1)
         dg.add_edge(6, 5, weight=16)
-        computed = network_utils.randomize_network(dg, switching_count_coef=2)
+        computed = network_utils._randomize_network(dg, switching_count_coef=2)
         self.assertEqual(
             sorted(dict(dg.degree()).values()),
             sorted(dict(computed.degree()).values()))
+        self.assertEqual(
+            sorted(dg.nodes()),
+            sorted(computed.nodes()))
 
     def test_randomize_network_with_signed_weighted_graph(self):
         dg = nx.DiGraph()
@@ -640,40 +646,117 @@ class MyTestClass(unittest.TestCase):
         dg.add_edge(1, 6, weight=-9)
         dg.add_edge(6, 1, weight=1)
         dg.add_edge(6, 5, weight=-16)
-        computed = network_utils.randomize_network(dg, switching_count_coef=2)
+        computed = network_utils._randomize_network(dg, switching_count_coef=2)
         self.assertEqual(
             sorted(dict(dg.degree()).values()),
             sorted(dict(computed.degree()).values()))
+        self.assertEqual(
+            sorted(dg.nodes()),
+            sorted(computed.nodes()))
 
     # =========================================================================
-    # ==== get_robustness_of_stationary_distribution_in_periods ===============
+    # ================== get_robustness_of_transitions ========================
     # =========================================================================
-    def test_get_robustness_of_stationary_distribution_in_periods(self):
+    def test_get_robustness_of_transitions(self):
         transition_matrices = [
-            np.array([[0.9, 0.1, 0], [0.6, 0.2, 0.2], [0.7, 0.1, 0.2]]),
-            np.array([[0.1, 0.8, 0.1], [0, 0.9, 0.1], [0.1, 0.1, 0.8]])
+            np.array(
+                [[0.9, 0.1, 0],
+                 [0.6, 0.2, 0.2],
+                 [0.7, 0.1, 0.2]]),
+            np.array(
+                [[0.1, 0.8, 0.1],
+                 [0, 0.9, 0.1],
+                 [0.1, 0.1, 0.8]])
         ]
+        # Expected dataframe.
+        columns = [
+            'Transitions',
+            'Matrix L2-Norm Dist. from Average',
+            'Matrix Pearson r-value',
+            'Matrix Pearson p-value',
+            'Stationary Dist. L2-Norm Dist. from Average',
+            'Stationary Dist. Pearson r-value',
+            'Stationary Dist. Pearson p-value']
         expected_df = pd.DataFrame({
-            'Transitions': ['Period 1 to Period 2', 'Period 2 to Period 3'],
-            'L2-Norm Distance': [0.5833, 0.4404],
-            'Pearson r-val': [0.4637, 0.1319],
-            'Pearson p-val': [0.6930, 0.9156]
+            columns[0]: ['Period 1 to Period 2', 'Period 2 to Period 3'],
+            columns[1]: [0.8444, 0.8083],
+            columns[2]: [0.4256, 0.6522],
+            columns[3]: [0.2534, 0.0569],
+            columns[4]: [0.5833, 0.4404],
+            columns[5]: [0.4637, 0.1319],
+            columns[6]: [0.6930, 0.9156],
             },
-            columns=[
-                'Transitions',
-                'L2-Norm Distance',
-                'Pearson r-val',
-                'Pearson p-val'])
-        expected_sds = np.array([
-            np.array([0.8609, 0.1112, 0.0279]),
-            np.array([0.0371, 0.6295, 0.3333])])
-        computed_df, computed_sds = (
-            network_utils.get_robustness_of_stationary_distribution_in_periods(
-                transition_matrices, lnorm=2))
+            columns=columns)
+        expected_df = pd.DataFrame(
+            expected_df, columns=columns)
+        # Computed dataframe.
+        computed_df = network_utils.get_robustness_of_transitions(
+            transition_matrices, lnorm=2)
+        # Comparing computed with expected.
         pd.testing.assert_frame_equal(
-            expected_df, computed_df, check_less_precise=3)
-        np.testing.assert_array_almost_equal(
-            expected_sds, computed_sds, decimal=4)
+            expected_df, computed_df, check_less_precise=2)
+
+    # =========================================================================
+    # ================== generate_converted_graphs ============================
+    # =========================================================================
+    def test_generate_converted_graphs_when_it_adds_edges(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(1, 3, weight=1)
+        dg.add_edge(2, 3, weight=1)
+        dg.add_edge(3, 1, weight=1)
+        percentage = 25
+        computed_graphs = network_utils.generate_converted_graphs(
+            dgraph=dg,
+            convert_from=0,
+            convert_to=1,
+            percentage=percentage,
+            how_many_to_generate=2)
+        for computed in computed_graphs:
+            # It should contain all nodes.
+            self.assertEqual(dg.nodes(), computed.nodes())
+            # It should contain all dg's edges.
+            self.assertEqual(len(nx.difference(dg, computed).edges()), 0)
+            # It should contain percentage% more edges.
+            remaining_edges_count = 4 * 3 - 4
+            self.assertEqual(
+                len(nx.difference(computed, dg).edges()),
+                int(percentage*remaining_edges_count/100))
+
+    def test_generate_converted_graphs_when_all_edges_exist(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4])
+        dg.add_edge(1, 2, weight=2)
+        dg.add_edge(1, 3, weight=-5)
+        dg.add_edge(2, 3, weight=-2)
+        dg.add_edge(3, 1, weight=2)
+        dg.add_edge(4, 1, weight=2)
+        dg.add_edge(4, 3, weight=2)
+        percentage = 25
+        computed_graphs = network_utils.generate_converted_graphs(
+            dgraph=dg,
+            convert_from=2,
+            convert_to=3,
+            percentage=percentage,
+            how_many_to_generate=2)
+        for computed in computed_graphs:
+            converted_cnt = 0
+            # It should contain all nodes.
+            self.assertEqual(dg.nodes(), computed.nodes())
+            # It should contain all dg's edges.
+            self.assertEqual(dg.edges(), computed.edges())
+            # Checking every edge weight.
+            for edge in dg.edges():
+                w1 = dg.get_edge_data(edge[0], edge[1])['weight']
+                w2 = computed.get_edge_data(edge[0], edge[1])['weight']
+                if w1 == w2:
+                    continue
+                if w1 != w2 and w1 == 2 and w2 == 3 and converted_cnt == 0:
+                    converted_cnt += 1
+                else:
+                    self.assertTrue(
+                        False, 'Found more converted edges than expeced.')
 
 
 if __name__ == '__main__':

@@ -1,28 +1,29 @@
 # Omid55
-# Date:     16 Oct 2018
+# Start date:     16 Oct 2018
+# Modified date:  18 Nov 2018
 # Author:   Omid Askarisichani
 # Email:    omid55@cs.ucsb.edu
-# Dynamic balance theory utils module.
+# Dynamic networks and specificly structural balance theory utility module.
 
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import itertools
+import datetime
+import math
+import numpy as np
+import scipy as sp
+import pandas as pd
+import networkx as nx
+import matplotlib.pyplot as plt
+import seaborn as sns
+# import enforce
 from typing import Dict
 from typing import List
 from typing import Union
 from typing import Set
 from typing import Tuple
-import itertools
-import numpy as np
-import scipy as sp
-import pandas as pd
-import datetime
-import networkx as nx
-import math
-import matplotlib.pyplot as plt
-import seaborn as sns
-# import enforce
 
 import utils
 
@@ -740,10 +741,10 @@ def get_mixing_time_range(
 
 
 # @enforce.runtime_validation
-def randomize_network(
+def _randomize_network(
         dgraph: nx.DiGraph,
         switching_count_coef: int = 300) -> nx.DiGraph:
-    """Generates randomized network for a given adjancecy matrix.
+    """Generates randomized network for a given directed graph.
 
     It preserves the in- and out- degree intact. It keeps the degree
     distribution by randomly switches single and double edges for at least
@@ -764,8 +765,8 @@ def randomize_network(
     #   (convergence) and terminate the algorithm.
     MAX_TIMES = 1000
 
-    adj = nx.adjacency_matrix(dgraph).todense()
     edge_count = len(dgraph.edges())
+    adj = utils.dgraph2adjacency(dgraph=dgraph)
     desired_switching_count = switching_count_coef * edge_count
     switching_count = 0
     prev_switching_count = 0
@@ -789,17 +790,10 @@ def randomize_network(
         t2 = double_edges[1][j]
         if not (adj[s1, t2] or adj[s2, t1] or adj[t2, s1] or adj[t1, s2]
                 or s1 == t2 or s1 == s2 or s2 == t1 or t1 == t2):
-            adj[s1, t2] = adj[s1, t1]
-            adj[s1, t1] = 0
-
-            adj[t2, s1] = adj[t1, s1]
-            adj[t1, s1] = 0
-
-            adj[s2, t1] = adj[s2, t2]
-            adj[s2, t2] = 0
-
-            adj[t1, s2] = adj[t2, s2]
-            adj[t2, s2] = 0
+            utils.swap_two_elements_in_matrix(adj, s1, t1, s1, t2)
+            utils.swap_two_elements_in_matrix(adj, t1, s1, t2, s1)
+            utils.swap_two_elements_in_matrix(adj, s2, t2, s2, t1)
+            utils.swap_two_elements_in_matrix(adj, t2, s2, t1, s2)
             switching_count += 1
 
         # Single edges.
@@ -817,11 +811,8 @@ def randomize_network(
         t2 = single_edges[1][j]
         if not(adj[s1, t2] or adj[s2, t1]
                 or s1 == t2 or s1 == s2 or s2 == t1 or t1 == t2):
-            adj[s1, t2] = adj[s1, t1]
-            adj[s1, t1] = 0
-
-            adj[s2, t1] = adj[s2, t2]
-            adj[s2, t2] = 0
+            utils.swap_two_elements_in_matrix(adj, s1, t1, s1, t2)
+            utils.swap_two_elements_in_matrix(adj, s2, t2, s2, t1)
             switching_count += 1
 
         if not counter % MAX_TIMES:
@@ -829,7 +820,7 @@ def randomize_network(
                 raise Exception('Not converged.')
             else:
                 prev_switching_count = switching_count
-    return nx.from_numpy_matrix(adj, create_using=nx.DiGraph())
+    return utils.adjacency2digraph(adj_matrix=adj, similar_this_dgraph=dgraph)
 
 
 # @enforce.runtime_validation
@@ -866,9 +857,9 @@ def compute_randomized_transition_matrix(
         unique_triad_num = len(triad_list)
     rand_transition_matrices = []
     for _ in range(randomized_num):
-        rand_dgraph1 = randomize_network(
+        rand_dgraph1 = _randomize_network(
             dgraph=dgraph1, switching_count_coef=switching_count_coef)
-        rand_dgraph2 = randomize_network(
+        rand_dgraph2 = _randomize_network(
             dgraph=dgraph2, switching_count_coef=switching_count_coef)
         rand_transition_matrices.append(
             compute_transition_matrix(
@@ -879,9 +870,9 @@ def compute_randomized_transition_matrix(
 
 
 # @enforce.runtime_validation
-def get_robustness_of_stationary_distribution_in_periods(
+def get_robustness_of_transitions(
         transition_matrices: List[np.ndarray],
-        lnorm: int = 2) -> Tuple[pd.DataFrame, np.ndarray]:
+        lnorm: int = 2) -> pd.DataFrame:
     """Gets stationary dist of each transition and dist/corr with average one.
 
     Args:
@@ -903,42 +894,107 @@ def get_robustness_of_stationary_distribution_in_periods(
         None.
     """
     n, _ = transition_matrices[0].shape
-    average_transition_matrix = np.zeros((n, n))
+    avg_transition_matrix = np.zeros((n, n))
     for i in range(len(transition_matrices)):
-        average_transition_matrix += transition_matrices[i]
-    average_transition_matrix /= n
+        avg_transition_matrix += transition_matrices[i]
+    avg_transition_matrix /= n
 
     result = []
-    stationary_distributions = []
-    mean_stationary_distribution = get_stationary_distribution(
-        average_transition_matrix)
+    avg_stationary_distribution = get_stationary_distribution(
+        avg_transition_matrix)
 
     for index, transition_matrix in enumerate(transition_matrices):
-        stationary_dist = get_stationary_distribution(transition_matrix)
-        stationary_distributions.append(stationary_dist)
+        matrix_dist_distance = np.linalg.norm(
+            avg_transition_matrix - transition_matrix, lnorm)
+        matrix_dist_rval, matrix_dist_pval = sp.stats.pearsonr(
+            avg_transition_matrix.flatten(), transition_matrix.flatten())
 
-        distance = np.linalg.norm(
-            mean_stationary_distribution - stationary_dist, lnorm)
-        rval, pval = sp.stats.pearsonr(
-            mean_stationary_distribution, stationary_dist)
+        stationary_dist = get_stationary_distribution(transition_matrix)
+
+        stationary_dist_distance = np.linalg.norm(
+            avg_stationary_distribution - stationary_dist, lnorm)
+        stationary_dist_rval, stationary_dist_pval = sp.stats.pearsonr(
+            avg_stationary_distribution, stationary_dist)
+
         result.append(
             ['Period {} to Period {}'.format(index+1, index+2),
-                distance,
-                rval,
-                pval])
+                matrix_dist_distance,
+                matrix_dist_rval,
+                matrix_dist_pval,
+                stationary_dist_distance,
+                stationary_dist_rval,
+                stationary_dist_pval])
 
-    result = pd.DataFrame(result, columns=[
-        'Transitions',
-        'L{}-Norm Distance'.format(lnorm),
-        'Pearson r-val',
-        'Pearson p-val'])
+    result = pd.DataFrame(
+        result, columns=[
+            'Transitions',
+            'Matrix L{}-Norm Dist. from Average'.format(lnorm),
+            'Matrix Pearson r-value',
+            'Matrix Pearson p-value',
+            'Stationary Dist. L{}-Norm Dist. from Average'.format(lnorm),
+            'Stationary Dist. Pearson r-value',
+            'Stationary Dist. Pearson p-value'])
 
-    # for stationary_distribution in stationary_distributions:
-    #     plt.plot(stationary_distribution)
+    return result
 
-    # plt.errorbar(
-    #     range(n), np.mean(stationary_distributions, axis=0),
-    #     yerr=np.std(stationary_distributions/np.sqrt(
-    #             len(transition_matrices)), axis=0), fmt='.')
 
-    return result, stationary_distributions
+# @enforce.runtime_validation
+def generate_converted_graphs(
+        dgraph: nx.DiGraph,
+        convert_from: float = 0.0,
+        convert_to: float = 1.0,
+        percentage: float = 5.0,
+        how_many_to_generate: int = 10) -> List[nx.DiGraph]:
+    """Generates a list digraphs with randomly converting a percentage of sign.
+
+    It generates a list of graphs with partially converting a given percentage
+    of edge sign from given content to another given content from one given
+    directed graph.
+
+    Args:
+        dgraph: Given directed graph.
+
+        percentage: The percentage of edges to do randomly sign conversion.
+
+        convert_from: Converts from this value.
+
+        convert_to: Converts to this value.
+
+        how_many_to_generate: How many new directed graphs to be generated.
+
+    Returns:
+        A list of generated directed graphs.
+
+    Raises:
+        ValueError: If percentage was wrong or dgraph does not contain
+            convert_from value.
+    """
+    # The process is easier to be applied on adjacency matrix.
+    if percentage < 0 or percentage > 100:
+        raise ValueError(
+            'Inputted percentage was wrong: {}.'.format(percentage))
+    original_adj_matrix = utils.dgraph2adjacency(dgraph=dgraph)
+    unq_val = max(convert_from, convert_to) + 5  # Value that is not targeted.
+    np.fill_diagonal(original_adj_matrix, unq_val)
+    from_edges = np.where(original_adj_matrix == convert_from)
+    from_edges_cnt = len(from_edges[0])
+    if not from_edges_cnt:
+        raise ValueError(
+            'Inputted directed graph does not contain the edge weight'
+            ' equals {}.'.format(convert_from))
+    generated_dgraphs = []
+    for _ in range(how_many_to_generate):
+        adj_matrix = original_adj_matrix.copy()
+        selected_indices = np.random.choice(
+            from_edges_cnt,
+            int(percentage * from_edges_cnt / 100),
+            replace=False)
+        for index in selected_indices:
+            adj_matrix[from_edges[0][index], from_edges[1][index]] = convert_to
+        # This is a social network and should not contain any self-loop.
+        np.fill_diagonal(adj_matrix, 0)
+        generated_dgraphs.append(
+            utils.adjacency2digraph(
+                adj_matrix=adj_matrix,
+                similar_this_dgraph=dgraph))
+    return generated_dgraphs
