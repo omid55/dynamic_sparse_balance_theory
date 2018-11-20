@@ -949,7 +949,12 @@ def generate_converted_graphs(
 
     It generates a list of graphs with partially converting a given percentage
     of edge sign from given content to another given content from one given
-    directed graph.
+    directed graph. This has been done to perform a robustness check on whether
+    one of edge weights were infered/given wrong (it should have been value
+    convert_to; however, it has been set to value convert_from). In this way,
+    we randomly convert a small (i.e. 5%) from another edge weight and return
+    the graphs to see whether the subsequent analysis is robust with respect to
+    this possible noise in the data.
 
     Args:
         dgraph: Given directed graph.
