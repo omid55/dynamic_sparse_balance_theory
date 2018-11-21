@@ -758,6 +758,23 @@ class MyTestClass(unittest.TestCase):
                     self.assertTrue(
                         False, 'Found more converted edges than expeced.')
 
+    def test_generate_converted_graphs(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4])
+        percentage = 10
+        computed_graphs = network_utils.generate_converted_graphs(
+            dgraph=dg,
+            convert_from=0,
+            convert_to=1,
+            percentage=percentage,
+            how_many_to_generate=2)
+        for computed in computed_graphs:
+            # It should contain all nodes.
+            self.assertEqual(dg.nodes(), computed.nodes())
+            # It should contain percentage extra edges.
+            self.assertEqual(
+                len(computed.edges()), int(4*3*percentage/100))
+
 
 if __name__ == '__main__':
     unittest.main()
