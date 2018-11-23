@@ -158,9 +158,21 @@ def get_just_periods(
             start_date + period_index * datetime.timedelta(weeks * 7))
         period_end = period_start + datetime.timedelta(weeks * 7)
         if not accumulative:
-            periods.append([str(period_start.date()), str(period_end.date())])
+            if isinstance(period_start, datetime.datetime):
+                ps = period_start.date()
+                pe = period_end.date()
+            else:
+                ps = period_start
+                pe = period_end
+            periods.append([str(ps), str(pe)])
         else:
-            periods.append([str(start_date.date()), str(period_end.date())])
+            if isinstance(start_date, datetime.datetime):
+                ps = start_date.date()
+                pe = period_end.date()
+            else:
+                ps = start_date
+                pe = period_end
+            periods.append([str(ps), str(pe)])
     return periods
 
 
