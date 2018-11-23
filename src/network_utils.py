@@ -1,6 +1,6 @@
 # Omid55
 # Start date:     16 Oct 2018
-# Modified date:  18 Nov 2018
+# Modified date:  22 Nov 2018
 # Author:   Omid Askarisichani
 # Email:    omid55@cs.ucsb.edu
 # Dynamic networks and specificly structural balance theory utility module.
@@ -29,15 +29,55 @@ import utils
 
 
 # @enforce.runtime_validation
+def extract_graph(
+        selected_edge_list: pd.DataFrame,
+        sum_multiple_edge: bool = False) -> nx.DiGraph:
+    """Extracts a list of graphs in each period of time.
+
+    If there were multiple edges between two nodes, then if sum_multiple_edge
+    is True, the edge weight is assigned as the summation of all edge weights.
+    If sum_multiple_edge is False, then the latest edge weight is assigned as
+    the weight.
+
+    Args:
+        selected_edge_list: Dataframe of edges containing required columns.
+
+        sum_multiple_edge: Whether to pick the latest or sum multiple edges.
+
+    Returns:
+        Directed graph created from selected edge list.
+
+    Raises:
+        ValueError: if it does not contain required columns.
+    """
+    utils.check_required_columns(
+        selected_edge_list, ['source', 'target', 'weight'])
+    if not sum_multiple_edge:
+        # Considers the weight of the latest edge weight as the weight.
+        dataframe = selected_edge_list
+    else:
+        # Considers summation of edge weights as the weight.
+        dataframe = selected_edge_list.groupby(
+            ['source', 'target'], as_index=False)['weight'].sum()
+    return nx.from_pandas_edgelist(
+        dataframe,
+        source='source',
+        target='target',
+        edge_attr='weight',
+        create_using=nx.DiGraph())
+
+
+# @enforce.runtime_validation
 def extract_graphs(
         edge_list: pd.DataFrame,
         weeks: int = 4,
-        accumulative: bool = False) -> List[nx.DiGraph]:
+        accumulative: bool = False,
+        sum_multiple_edge: bool = False) -> List[nx.DiGraph]:
     """Extracts a list of graphs in each period of time.
 
     It extracts graph structure for periods with the duration of given number
     of weeks. Separated networks are created from the edges only happened
-    in that period. However, accumulative ones are created from all edges
+    in that period; However, accumulative ones are created from all edges
     since the beginnig until that period.
 
     Args:
@@ -47,6 +87,8 @@ def extract_graphs(
 
         accumulative: Whether we need separated networks or accumulative ones.
 
+        sum_multiple_edge: Whether to pick the latest or sum multiple edges.
+
     Returns:
         List of directed graphs created based on accumulative or separated.
 
@@ -55,7 +97,6 @@ def extract_graphs(
     """
     utils.check_required_columns(
         edge_list, ['edge_date', 'source', 'target', 'weight'])
-
     start_date = min(edge_list['edge_date'])
     end_date = max(edge_list['edge_date'])
     dgraphs = []
@@ -73,14 +114,54 @@ def extract_graphs(
         else:
             # Chooses the edges until this period (accumulative).
             selected_edges = edge_list[edge_list['edge_date'] < period_end]
-        dgraph = nx.from_pandas_edgelist(
-            selected_edges,
-            source='source',
-            target='target',
-            edge_attr='weight',
-            create_using=nx.DiGraph())
+        dgraph = extract_graph(
+            selected_edges, sum_multiple_edge=sum_multiple_edge)
         dgraphs.append(dgraph)
     return dgraphs
+
+
+# @enforce.runtime_validation
+def get_just_periods(
+        edge_list: pd.DataFrame,
+        weeks: int = 4,
+        accumulative: bool = False) -> List:
+    """Extracts a list of graphs in each period of time.
+
+    It extracts graph structure for periods with the duration of given number
+    of weeks. Separated networks are created from the edges only happened
+    in that period; However, accumulative ones are created from all edges
+    since the beginnig until that period.
+
+    Args:
+        edge_list: Dataframe of edges containing required columns.
+
+        weeks: The number of weeks for the desired period length.
+
+        accumulative: Whether we need separated networks or accumulative ones.
+
+        sum_multiple_edge: Whether to pick the latest or sum multiple edges.
+
+    Returns:
+        List of directed graphs created based on accumulative or separated.
+
+    Raises:
+        ValueError: if it does not contain required columns.
+    """
+    utils.check_required_columns(
+        edge_list, ['edge_date'])
+    periods = []
+    start_date = min(edge_list['edge_date'])
+    end_date = max(edge_list['edge_date'])
+    periods_num = int(np.floor((end_date - start_date).days / (weeks * 7)))
+    for period_index in range(periods_num):
+        period_start = (
+            start_date + period_index * datetime.timedelta(weeks * 7))
+        period_end = period_start + datetime.timedelta(weeks * 7)
+        if not accumulative:
+            periods.append([str(period_start.date()), str(period_end.date())])
+        else:
+            periods.append([str(start_date.date()), str(period_end.date())])
+    return periods
 
 
 # # @enforce.runtime_validation
@@ -548,7 +629,7 @@ def _detect_triad_type_for_all_subgraph3(
         triad_map, _ = generate_all_possible_sparse_triads()
     subgraph2triad_type = {}
     nodes_list = np.array(dgraph.nodes())
-    adj_matrix = np.array(nx.adjacency_matrix(dgraph).todense())
+    adj_matrix = utils.dgraph2adjacency(dgraph)
     adj_matrix[adj_matrix > 0] = 1
     adj_matrix[adj_matrix < 0] = -1
     triads = list(itertools.combinations(range(len(nodes_list)), 3))
@@ -888,7 +969,7 @@ def get_robustness_of_transitions(
     distribution. Also it returns the list of stationary distributions.
 
     Returns:
-        Dataframe of distance and Pearons correlation from average transition.
+        Dataframe of distance and Pearsons correlation from average transition.
 
     Raises:
         None.

@@ -29,6 +29,48 @@ class MyTestClass(unittest.TestCase):
         del cls.triad_list
 
     # =========================================================================
+    # ==================== extract_graph ======================================
+    # =========================================================================
+    @parameterized.expand([
+        ["latest_multiple_edge_weight", False],
+        ["sum_of_multiple_edge_weights", True]])
+    def test_extract_graph(self, name, sum_multiple_edge):
+        matrix_edges = [
+            [1, 2, +1, datetime.datetime(2017, 1, 1)],
+            [1, 2, +5, datetime.datetime(2017, 1, 2)],
+            [2, 3, +3, datetime.datetime(2017, 1, 4)],
+            [3, 1, +1, datetime.datetime(2017, 2, 5)],
+            [2, 3, -2, datetime.datetime(2017, 1, 6)],
+            [1, 4, -1, datetime.datetime(2017, 2, 13)],
+            [4, 3, -5, datetime.datetime(2017, 2, 22)],
+            [4, 3, -5, datetime.datetime(2017, 2, 24)]]
+        sample_edge_list = pd.DataFrame(
+            matrix_edges, columns=['source', 'target', 'weight', 'edge_date'])
+        expected = nx.DiGraph()
+        expected.add_nodes_from([1, 2, 3, 4])
+        if sum_multiple_edge:
+            expected.add_edge(1, 2, weight=6)
+        else:
+            expected.add_edge(1, 2, weight=5)
+        if sum_multiple_edge:
+            expected.add_edge(2, 3, weight=1)
+        else:
+            expected.add_edge(2, 3, weight=-2)
+        expected.add_edge(3, 1, weight=1)
+        expected.add_edge(1, 4, weight=-1)
+        if sum_multiple_edge:
+            expected.add_edge(4, 3, weight=-10)
+        else:
+            expected.add_edge(4, 3, weight=-5)
+        computed = network_utils.extract_graph(
+            sample_edge_list, sum_multiple_edge=sum_multiple_edge)
+        self.assertTrue(
+            utils.graph_equals(
+                expected,
+                computed,
+                weight_column_name='weight'))
+
+    # =========================================================================
     # ==================== extract_graphs =====================================
     # =========================================================================
     def test_extract_graphs_raises_with_missing_columns(self):
@@ -37,14 +79,15 @@ class MyTestClass(unittest.TestCase):
             network_utils.extract_graphs(edge_list=sample_edge_list)
 
     @parameterized.expand(
-        [["seperated graphs", False], ["accumulative graphs", True]])
+        [["seperated graphs", False],
+         ["accumulative graphs", True]])
     def test_extract_graphs(self, name, accumulative):
         # source, target, weight, edge_date
         matrix_edges = [[1, 2, +1, datetime.datetime(2017, 1, 1)],
-                        [2, 3, +1, datetime.datetime(2017, 1, 4)],
+                        [2, 3, +3, datetime.datetime(2017, 1, 4)],
                         [3, 1, +1, datetime.datetime(2017, 2, 5)],
                         [1, 4, -1, datetime.datetime(2017, 2, 13)],
-                        [4, 3, -1, datetime.datetime(2017, 2, 24)],
+                        [4, 3, -5, datetime.datetime(2017, 2, 24)],
                         [-1, -1, -1, datetime.datetime(2017, 2, 28)]]
         # The last one is going to be ignored because fall into another period
         #   which is neglected.
@@ -53,20 +96,20 @@ class MyTestClass(unittest.TestCase):
             matrix_edges, columns=['source', 'target', 'weight', 'edge_date'])
         g1 = nx.DiGraph()
         g1.add_nodes_from([1, 2, 3])
-        g1.add_edge(1, 2)
-        g1.add_edge(2, 3)
+        g1.add_edge(1, 2, weight=1)
+        g1.add_edge(2, 3, weight=3)
         g2 = nx.DiGraph()
         g2.add_nodes_from([1, 3, 4])
-        g2.add_edge(3, 1)
-        g2.add_edge(1, 4)
-        g2.add_edge(4, 3)
+        g2.add_edge(3, 1, weight=1)
+        g2.add_edge(1, 4, weight=-1)
+        g2.add_edge(4, 3, weight=-5)
         g3 = nx.DiGraph()
         g3.add_nodes_from([1, 2, 3, 4])
-        g3.add_edge(1, 2)
-        g3.add_edge(2, 3)
-        g3.add_edge(3, 1)
-        g3.add_edge(1, 4)
-        g3.add_edge(4, 3)
+        g3.add_edge(1, 2, weight=1)
+        g3.add_edge(2, 3, weight=3)
+        g3.add_edge(3, 1, weight=1)
+        g3.add_edge(1, 4, weight=-1)
+        g3.add_edge(4, 3, weight=-5)
         if not accumulative:
             expected = [g1, g2]
         else:
@@ -74,7 +117,28 @@ class MyTestClass(unittest.TestCase):
         computed = network_utils.extract_graphs(
             edge_list=sample_edge_list, weeks=4, accumulative=accumulative)
         for expected_graph, computed_graph in zip(expected, computed):
-            self.assertTrue(utils.graph_equals(expected_graph, computed_graph))
+            self.assertTrue(
+                utils.graph_equals(
+                    expected_graph,
+                    computed_graph,
+                    weight_column_name='weight'))
+
+    # =========================================================================
+    # ===================== get_just_periods ==================================
+    # =========================================================================
+    def test_get_just_periods(self):
+        matrix_edges = [[1, 2, +1, datetime.datetime(2017, 1, 1)],
+                        [2, 3, +3, datetime.datetime(2017, 1, 4)],
+                        [3, 1, +1, datetime.datetime(2017, 2, 5)],
+                        [1, 4, -1, datetime.datetime(2017, 2, 13)],
+                        [4, 3, -5, datetime.datetime(2017, 2, 24)],
+                        [-1, -1, -1, datetime.datetime(2017, 2, 28)]]
+        sample_edge_list = pd.DataFrame(
+            matrix_edges, columns=['source', 'target', 'weight', 'edge_date'])
+        expected = [['2017-01-01', '2017-01-29'], ['2017-01-29', '2017-02-26']]
+        computed = network_utils.get_just_periods(
+            sample_edge_list, weeks=4, accumulative=False)
+        self.assertEqual(expected, computed)
 
     # =========================================================================
     # ==================== get_metrics_for_network ============================

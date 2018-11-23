@@ -72,7 +72,7 @@ class MyTestClass(unittest.TestCase):
         g2.add_nodes_from([1, 2, 3])
         g2.add_edge(2, 3)
         g2.add_edge(1, 2)
-        self.assertTrue(utils.graph_equals(g1, g2))
+        self.assertTrue(utils.graph_equals(g1, g2, weight_column_name=None))
 
     def test_graph_equals_when_not_same(self):
         g1 = nx.DiGraph()
@@ -84,7 +84,21 @@ class MyTestClass(unittest.TestCase):
         g2.add_edge(1, 2)
         g2.add_edge(2, 3)
         g2.add_edge(1, 3)
-        self.assertFalse(utils.graph_equals(g1, g2))
+        self.assertFalse(utils.graph_equals(g1, g2, weight_column_name=None))
+
+    def test_graph_equals_when_different_edge_weights(self):
+        g1 = nx.DiGraph()
+        g1.add_nodes_from([1, 2, 3])
+        g1.add_edge(1, 2, weight='5')
+        g1.add_edge(2, 3, weight='-1')
+        g1.add_edge(1, 3, weight='1')
+        g2 = nx.DiGraph()
+        g2.add_nodes_from([1, 2, 3])
+        g2.add_edge(1, 2, weight='5')
+        g2.add_edge(2, 3, weight='9')
+        g2.add_edge(1, 3, weight='1')
+        self.assertFalse(
+            utils.graph_equals(g1, g2, weight_column_name='weight'))
 
     # =========================================================================
     # ==================== sub_adjacency_matrix ===============================

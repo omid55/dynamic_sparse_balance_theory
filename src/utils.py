@@ -8,8 +8,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-from typing import Dict
-from typing import List
 import pandas as pd
 import numpy as np
 import matplotlib
@@ -18,6 +16,8 @@ import pickle as pk
 import networkx as nx
 import shelve
 # import enforce
+from typing import Dict
+from typing import List
 
 
 # @enforce.runtime_validation
@@ -61,15 +61,20 @@ def check_required_columns(
 
 
 # @enforce.runtime_validation
-def graph_equals(g1: nx.DiGraph, g2: nx.DiGraph) -> bool:
+def graph_equals(
+        g1: nx.DiGraph,
+        g2: nx.DiGraph,
+        weight_column_name: str = 'weight') -> bool:
     """Checks if two graphs are equal.
 
-    TODO(omid55): check for a possible mapping or node names if not same.
+    If weight_column_name is None, then it does not check weight values.
 
     Args:
         g1: First graph to be compared.
 
         g2: Second graph to be compared.
+
+        weight_column_name: The name of weight column.
 
     Returns:
         Boolean whether g1 equals g2 or not.
@@ -77,7 +82,17 @@ def graph_equals(g1: nx.DiGraph, g2: nx.DiGraph) -> bool:
     Raises:
         None.
     """
-    return g1.nodes() == g2.nodes() and g1.edges() == g2.edges()
+    if g1.nodes() != g2.nodes():
+        return False
+    if g1.edges() != g2.edges():
+        return False
+    if weight_column_name:
+        for edge in g1.edges():
+            w1 = g1.get_edge_data(edge[0], edge[1])[weight_column_name]
+            w2 = g2.get_edge_data(edge[0], edge[1])[weight_column_name]
+            if w1 != w2:
+                return False
+    return True
 
 
 # @enforce.runtime_validation
