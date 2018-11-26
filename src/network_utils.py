@@ -524,8 +524,13 @@ def is_transitive_balanced(triad: np.ndarray) -> bool:
         Boolean result whether triad is transitively balanced or not.
 
     Raises:
-        ValueError: If there is a self loop in the given triad.
+        ValueError: If there is a self loop in the given triad or triad was not
+        3 * 3.
     """
+    n, m = triad.shape
+    if n != 3 or m != 3:
+        raise ValueError('Triad has unexpected shape.')
+
     for i in range(3):
         if triad[i, i]:
             raise ValueError('There is a self loop in given triad: {}.'.format(
@@ -552,7 +557,6 @@ def is_transitive_balanced(triad: np.ndarray) -> bool:
         if ((triad[a, b] > 0) and (triad[b, c] > 0)
                 and (triad[a, b]*triad[b, c]*triad[a, c] <= 0)):
             return False
-
         # For every path from c to a.
         if ((triad[c, b] > 0) and (triad[b, a] > 0)
                 and (triad[c, b]*triad[b, a]*triad[c, a] <= 0)):
