@@ -223,6 +223,9 @@ class MyTestClass(unittest.TestCase):
         dg.add_edge(2, 1, weight=1)
         self.assertEqual(network_utils.cartwright_harary_balance(dg), 0.5)
 
+    # =========================================================================
+    # ====================== count_different_signed_edges =====================
+    # =========================================================================
     def test_count_different_signed_edges(self):
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3])
@@ -361,15 +364,15 @@ class MyTestClass(unittest.TestCase):
         self.assertDictEqual(computed, expected)
 
     # =========================================================================
-    # ====================== is_transitive_balanced ===========================
+    # ====================== is_sparsely_transitive_balanced ==================
     # =========================================================================
-    def test_is_transitive_balanced_raises_when_self_loops(self):
+    def test_is_sparsely_transitive_balanced_raises_when_self_loops(self):
         with self.assertRaises(ValueError):
             triad_with_self_loop = np.array(
                 [[0, 1, 0],
                  [0, 1, 1],
                  [0, 0, 0]])
-            network_utils.is_transitive_balanced(triad_with_self_loop)
+            network_utils.is_sparsely_transitive_balanced(triad_with_self_loop)
 
     @parameterized.expand([
         ["030TZ", np.array(
@@ -429,9 +432,88 @@ class MyTestClass(unittest.TestCase):
              [-1, 0, -1],
              [-1, -1, 0]]), True]]
         )
-    def test_is_transitive_balanced(self, name, triad, expected_balance):
+    def test_is_sparsely_transitive_balanced(
+            self, name, triad, expected_balance):
         self.assertEqual(
-            network_utils.is_transitive_balanced(triad), expected_balance)
+            network_utils.is_sparsely_transitive_balanced(triad),
+            expected_balance)
+
+    # =========================================================================
+    # ====================== is_sparsely_cartwright_harary_balanced ===========
+    # =========================================================================
+    def test_is_sparsely_cartwright_harary_balanced_raises_when_self_loops(
+            self):
+        with self.assertRaises(ValueError):
+            triad_with_self_loop = np.array(
+                [[0, 1, 0],
+                 [0, 1, 1],
+                 [0, 0, 0]])
+            network_utils.is_sparsely_cartwright_harary_balanced(
+                triad_with_self_loop)
+
+    @parameterized.expand([
+        ["030TZ", np.array(
+            [[0, 1, 1],
+             [0, 0, 1],
+             [0, 0, 0]]), True],
+        ["030T", np.array(
+            [[0, 1, 1],
+             [-1, 0, 1],
+             [-1, -1, 0]]), False],
+        ["021C", np.array(
+            [[0, 1, -1],
+             [-1, 0, 1],
+             [-1, -1, 0]]), False],
+        ["030T2negZ", np.array(
+            [[0, 1, -1],
+             [0, 0, -1],
+             [0, 0, 0]]), True],
+        ["021UnegZ", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, -1, 0]]), True],
+        ["021DZ", np.array(
+            [[0, 0, 0],
+             [1, 0, 1],
+             [0, 0, 0]]), True],
+        ["210Z", np.array(
+            [[0, 1, -1],
+             [1, 0, 1],
+             [1, 1, 0]]), False],
+        ["210Z", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [1, 1, 0]]), False],
+        ["003Z", np.array(
+            [[0, 0, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), True],
+        ["102Z", np.array(
+            [[0, 1, 0],
+             [1, 0, 0],
+             [0, 0, 0]]), True],
+        ["102negZ", np.array(
+            [[0, -1, 0],
+             [-1, 0, 0],
+             [0, 0, 0]]), True],
+        ["102posnegZ", np.array(
+            [[0, 1, 0],
+             [-1, 0, 0],
+             [0, 0, 0]]), True],
+        ["012Z", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), True],
+        ["012", np.array(
+            [[0, 1, -1],
+             [-1, 0, -1],
+             [-1, -1, 0]]), False]]
+        )
+    def test_is_sparsely_cartwright_harary_balanced(
+            self, name, triad, expected_balance):
+        self.assertEqual(
+            network_utils.is_sparsely_cartwright_harary_balanced(triad),
+            expected_balance)
 
     # =========================================================================
     # ====================== get_all_triad_permutations =======================

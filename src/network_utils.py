@@ -301,7 +301,10 @@ def cartwright_harary_balance(dgraph: nx.DiGraph) -> float:
                 negative_count += 1
         if negative_count % 2 == 0:
             balanced_cycle_count += 1
-    balance_ratio = balanced_cycle_count / cycle_count
+    if cycle_count:
+        balance_ratio = balanced_cycle_count / cycle_count
+    else:
+        balance_ratio = 1
     return balance_ratio
 
 
@@ -511,7 +514,7 @@ def compute_fairness_goodness(
 
 
 # @enforce.runtime_validation
-def is_transitive_balanced(triad: np.ndarray) -> bool:
+def is_sparsely_transitive_balanced(triad: np.ndarray) -> bool:
     """Checks whether input triad matrix is transitively balanced or not.
 
     Transitive balance is defined on only one rule:
@@ -530,7 +533,6 @@ def is_transitive_balanced(triad: np.ndarray) -> bool:
     n, m = triad.shape
     if n != 3 or m != 3:
         raise ValueError('Triad has unexpected shape.')
-
     for i in range(3):
         if triad[i, i]:
             raise ValueError('There is a self loop in given triad: {}.'.format(
@@ -562,6 +564,43 @@ def is_transitive_balanced(triad: np.ndarray) -> bool:
                 and (triad[c, b]*triad[b, a]*triad[c, a] <= 0)):
             return False
 
+    return True
+
+
+# @enforce.runtime_validation
+def is_sparsely_cartwright_harary_balanced(triad: np.ndarray) -> bool:
+    """Checks whether input triad matrix is balanced or not w.r.t. C & H.
+
+    Cartwright and Harary balance is defined on multiplication of every 3 edge
+    to be always positive. In the case of sparsity, whether two edge exists,
+    the third edge should also exist. If only one exist the third is not
+    required.
+    This also is aligned with Kulakowski (2005) paper because:
+    dr(i, j) / dt = sum_k r(i, k) * r(k, j)
+
+    Args:
+        triad: Input triad matrix.
+
+    Returns:
+        Boolean result whether triad is transitively balanced or not.
+
+    Raises:
+        ValueError: If there is a self loop in the given triad or triad was not
+        3 * 3.
+    """
+    n, m = triad.shape
+    if n != 3 or m != 3:
+        raise ValueError('Triad has unexpected shape.')
+    for i in range(n):
+        if triad[i, i]:
+            raise ValueError('There is a self loop in given triad: {}.'.format(
+                triad))
+    if (np.sum([abs(triad[0, 1]), abs(triad[1, 2]), abs(triad[0, 2])]) > 1
+            and triad[0, 1] * triad[1, 2] * triad[0, 2] <= 0):
+        return False
+    if (np.sum([abs(triad[2, 1]), abs(triad[1, 0]), abs(triad[2, 0])]) > 1
+            and triad[2, 1] * triad[1, 0] * triad[2, 0] <= 0):
+        return False
     return True
 
 
