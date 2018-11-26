@@ -387,7 +387,6 @@ def _adjacency2digraph_with_given_mapping(
     """
     if adj_matrix.shape[0] != adj_matrix.shape[1]:
         raise ValueError('Adjacency matrix is not squared.')
-
     new_dgrpah = nx.from_numpy_matrix(adj_matrix, create_using=nx.DiGraph())
     if node_mapping:
         return nx.relabel_nodes(new_dgrpah, mapping=node_mapping)
