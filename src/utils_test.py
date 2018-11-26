@@ -232,6 +232,20 @@ class MyTestClass(unittest.TestCase):
                 dg.get_edge_data(edge[0], edge[1]),
                 computed_graph.get_edge_data(edge[0], edge[1]))
 
+    def test_adjacency2digraph_without_similar_graph(self):
+        dg = self.sample_dgraph
+        adj_matrix = utils.dgraph2adjacency(dg)
+        # We need to map the node labels to start from 0 due to the default.
+        dg = nx.relabel_nodes(dg, mapping={i+1: i for i in range(4)})
+        computed_graph = utils.adjacency2digraph(adj_matrix=adj_matrix)
+        self.assertEqual(dg.nodes(), computed_graph.nodes())
+        self.assertEqual(dg.edges(), computed_graph.edges())
+        # Checking every edge weight.
+        for edge in dg.edges():
+            self.assertEqual(
+                dg.get_edge_data(edge[0], edge[1]),
+                computed_graph.get_edge_data(edge[0], edge[1]))
+
     # =========================================================================
     # ================ _adjacency2digraph_with_given_mapping ==================
     # =========================================================================

@@ -359,13 +359,13 @@ def adjacency2digraph(
     if adj_matrix.shape[0] != adj_matrix.shape[1]:
         raise ValueError('Adjacency matrix is not squared.')
 
-    node_mapping = None
     if similar_this_dgraph:
         node_mapping = {
             i: list(similar_this_dgraph.nodes())[i]
             for i in range(similar_this_dgraph.number_of_nodes())}
-    return _adjacency2digraph_with_given_mapping(
-        adj_matrix=adj_matrix, node_mapping=node_mapping)
+        return _adjacency2digraph_with_given_mapping(
+            adj_matrix=adj_matrix, node_mapping=node_mapping)
+    return _adjacency2digraph_with_given_mapping(adj_matrix=adj_matrix)
 
 
 # @enforce.runtime_validation
@@ -389,4 +389,6 @@ def _adjacency2digraph_with_given_mapping(
         raise ValueError('Adjacency matrix is not squared.')
 
     new_dgrpah = nx.from_numpy_matrix(adj_matrix, create_using=nx.DiGraph())
-    return nx.relabel_nodes(new_dgrpah, mapping=node_mapping)
+    if node_mapping:
+        return nx.relabel_nodes(new_dgrpah, mapping=node_mapping)
+    return new_dgrpah
