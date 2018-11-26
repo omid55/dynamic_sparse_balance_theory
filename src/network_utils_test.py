@@ -372,34 +372,62 @@ class MyTestClass(unittest.TestCase):
             network_utils.is_transitive_balanced(triad_with_self_loop)
 
     @parameterized.expand([
-        ["030T", np.array(
+        ["030TZ", np.array(
             [[0, 1, 1],
              [0, 0, 1],
              [0, 0, 0]]), True],
-        ["030Tneg", np.array(
+        ["030T", np.array(
+            [[0, 1, 1],
+             [-1, 0, 1],
+             [-1, -1, 0]]), True],
+        ["021C", np.array(
             [[0, 1, -1],
-             [0, 0, 1],
-             [0, 0, 0]]), False],
-        ["030T2neg", np.array(
+             [-1, 0, 1],
+             [-1, -1, 0]]), False],
+        ["030T2negZ", np.array(
             [[0, 1, -1],
              [0, 0, -1],
              [0, 0, 0]]), True],
-        ["021Uneg", np.array(
+        ["021UnegZ", np.array(
             [[0, 1, 0],
              [0, 0, 0],
              [0, -1, 0]]), True],
-        ["021D", np.array(
+        ["021DZ", np.array(
             [[0, 0, 0],
              [1, 0, 1],
              [0, 0, 0]]), True],
-        ["210", np.array(
+        ["210Z", np.array(
+            [[0, 1, -1],
+             [1, 0, 1],
+             [1, 1, 0]]), False],
+        ["210Z", np.array(
             [[0, 1, 0],
              [1, 0, 1],
              [1, 1, 0]]), False],
-        ["003", np.array(
+        ["003Z", np.array(
             [[0, 0, 0],
              [0, 0, 0],
-             [0, 0, 0]]), True]]
+             [0, 0, 0]]), True],
+        ["102Z", np.array(
+            [[0, 1, 0],
+             [1, 0, 0],
+             [0, 0, 0]]), True],
+        ["102negZ", np.array(
+            [[0, -1, 0],
+             [-1, 0, 0],
+             [0, 0, 0]]), True],
+        ["102posnegZ", np.array(
+            [[0, 1, 0],
+             [-1, 0, 0],
+             [0, 0, 0]]), True],
+        ["012Z", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), True],
+        ["012", np.array(
+            [[0, 1, -1],
+             [-1, 0, -1],
+             [-1, -1, 0]]), True]]
         )
     def test_is_transitive_balanced(self, name, triad, expected_balance):
         self.assertEqual(
