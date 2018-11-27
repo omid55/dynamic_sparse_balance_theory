@@ -375,10 +375,22 @@ class MyTestClass(unittest.TestCase):
             network_utils.is_sparsely_transitive_balanced(triad_with_self_loop)
 
     @parameterized.expand([
+        ["0122Z", np.array(
+            [[0, 0, -1],
+             [-1, 0, 0],
+             [1, -1, 0]]), True],
         ["030TZ", np.array(
             [[0, 1, 1],
              [0, 0, 1],
              [0, 0, 0]]), True],
+        ["003", np.array(
+            [[0, -1, -1],
+             [-1, 0, -1],
+             [-1, -1, 0]]), True],
+        ["0032Z", np.array(
+            [[0, 0, -1],
+             [-1, 0, 0],
+             [-1, -1, 0]]), True],
         ["030T", np.array(
             [[0, 1, 1],
              [-1, 0, 1],
@@ -452,10 +464,22 @@ class MyTestClass(unittest.TestCase):
                 triad_with_self_loop)
 
     @parameterized.expand([
+        ["0122Z", np.array(
+            [[0, 0, -1],
+             [-1, 0, 0],
+             [1, -1, 0]]), False],
         ["030TZ", np.array(
             [[0, 1, 1],
              [0, 0, 1],
              [0, 0, 0]]), True],
+        ["003", np.array(
+            [[0, -1, -1],
+             [-1, 0, -1],
+             [-1, -1, 0]]), False],
+        ["0032Z", np.array(
+            [[0, 0, -1],
+             [-1, 0, 0],
+             [-1, -1, 0]]), False],
         ["030T", np.array(
             [[0, 1, 1],
              [-1, 0, 1],

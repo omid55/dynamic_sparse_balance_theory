@@ -595,12 +595,20 @@ def is_sparsely_cartwright_harary_balanced(triad: np.ndarray) -> bool:
         if triad[i, i]:
             raise ValueError('There is a self loop in given triad: {}.'.format(
                 triad))
-    if (np.sum([abs(triad[0, 1]), abs(triad[1, 2]), abs(triad[0, 2])]) > 1
-            and triad[0, 1] * triad[1, 2] * triad[0, 2] <= 0):
-        return False
-    if (np.sum([abs(triad[2, 1]), abs(triad[1, 0]), abs(triad[2, 0])]) > 1
-            and triad[2, 1] * triad[1, 0] * triad[2, 0] <= 0):
-        return False
+    for i in range(3):
+        a = i
+        b = (i + 1) % 3
+        c = (i + 2) % 3
+
+        # For every path from a to c.
+        if ((abs(triad[a, b]) and abs(triad[b, c]))
+                and (triad[a, b]*triad[b, c]*triad[a, c] <= 0)):
+            return False
+        # For every path from c to a.
+        if ((abs(triad[c, b]) and abs(triad[b, a]))
+                and (triad[c, b]*triad[b, a]*triad[c, a] <= 0)):
+            return False
+
     return True
 
 
