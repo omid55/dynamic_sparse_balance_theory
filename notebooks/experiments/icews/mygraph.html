@@ -1,0 +1,220 @@
+<html>
+<head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.css" type="text/css" />
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis-network.min.js"> </script>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+
+<style type="text/css">
+
+        #mynetwork {
+            width: 500px;
+            height: 500px;
+            background-color: #ffffff;
+            border: 1px solid lightgray;
+            position: relative;
+            float: left;
+        }
+
+        
+        #loadingBar {
+            position:absolute;
+            top:0px;
+            left:0px;
+            width: 500px;
+            height: 500px;
+            background-color:rgba(200,200,200,0.8);
+            -webkit-transition: all 0.5s ease;
+            -moz-transition: all 0.5s ease;
+            -ms-transition: all 0.5s ease;
+            -o-transition: all 0.5s ease;
+            transition: all 0.5s ease;
+            opacity:1;
+        }
+
+        #bar {
+            position:absolute;
+            top:0px;
+            left:0px;
+            width:20px;
+            height:20px;
+            margin:auto auto auto auto;
+            border-radius:11px;
+            border:2px solid rgba(30,30,30,0.05);
+            background: rgb(0, 173, 246); /* Old browsers */
+            box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+        }
+
+        #border {
+            position:absolute;
+            top:10px;
+            left:10px;
+            width:500px;
+            height:23px;
+            margin:auto auto auto auto;
+            box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+            border-radius:10px;
+        }
+
+        #text {
+            position:absolute;
+            top:8px;
+            left:530px;
+            width:30px;
+            height:50px;
+            margin:auto auto auto auto;
+            font-size:22px;
+            color: #000000;
+        }
+
+        div.outerBorder {
+            position:relative;
+            top:400px;
+            width:600px;
+            height:44px;
+            margin:auto auto auto auto;
+            border:8px solid rgba(0,0,0,0.1);
+            background: rgb(252,252,252); /* Old browsers */
+            background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+            background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+            background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+            background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+            background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+            background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+            border-radius:72px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+        }
+        
+
+        
+        #config {
+            float: left;
+            width: 400px;
+            height: 600px;
+        }
+        
+
+        
+</style>
+
+</head>
+
+<body>
+<div id = "mynetwork"></div>
+
+<div id="loadingBar">
+    <div class="outerBorder">
+        <div id="text">0%</div>
+        <div id="border">
+            <div id="bar"></div>
+        </div>
+    </div>
+</div>
+
+
+<div id = "config"></div>
+
+<script type="text/javascript">
+
+    // initialize global variables.
+    var edges;
+    var nodes;
+    var network; 
+    var container;
+    var options, data;
+
+    
+    // This method is responsible for drawing the graph, returns the drawn network
+    function drawGraph() {
+        var container = document.getElementById('mynetwork');
+        
+        
+
+        // parsing and collecting nodes and edges from the python
+        nodes = new vis.DataSet([{"id": 2, "label": 2, "shape": "dot", "title": "2"}, {"id": 249, "label": 249, "shape": "dot", "title": "249"}, {"id": 75, "label": 75, "shape": "dot", "title": "75"}, {"id": 237, "label": 237, "shape": "dot", "title": "237"}, {"id": 85, "label": 85, "shape": "dot", "title": "85"}, {"id": 3, "label": 3, "shape": "dot", "title": "3"}, {"id": 144, "label": 144, "shape": "dot", "title": "144"}, {"id": 209, "label": 209, "shape": "dot", "title": "209"}, {"id": 109, "label": 109, "shape": "dot", "title": "109"}, {"id": 227, "label": 227, "shape": "dot", "title": "227"}, {"id": 21, "label": 21, "shape": "dot", "title": "21"}, {"id": 108, "label": 108, "shape": "dot", "title": "108"}, {"id": 125, "label": 125, "shape": "dot", "title": "125"}, {"id": 6, "label": 6, "shape": "dot", "title": "6"}, {"id": 177, "label": 177, "shape": "dot", "title": "177"}, {"id": 10, "label": 10, "shape": "dot", "title": "10"}, {"id": 44, "label": 44, "shape": "dot", "title": "44"}, {"id": 30, "label": 30, "shape": "dot", "title": "30"}, {"id": 39, "label": 39, "shape": "dot", "title": "39"}, {"id": 11, "label": 11, "shape": "dot", "title": "11"}, {"id": 15, "label": 15, "shape": "dot", "title": "15"}, {"id": 13, "label": 13, "shape": "dot", "title": "13"}, {"id": 248, "label": 248, "shape": "dot", "title": "248"}, {"id": 236, "label": 236, "shape": "dot", "title": "236"}, {"id": 174, "label": 174, "shape": "dot", "title": "174"}, {"id": 14, "label": 14, "shape": "dot", "title": "14"}, {"id": 100, "label": 100, "shape": "dot", "title": "100"}, {"id": 54, "label": 54, "shape": "dot", "title": "54"}, {"id": 216, "label": 216, "shape": "dot", "title": "216"}, {"id": 57, "label": 57, "shape": "dot", "title": "57"}, {"id": 202, "label": 202, "shape": "dot", "title": "202"}, {"id": 221, "label": 221, "shape": "dot", "title": "221"}, {"id": 168, "label": 168, "shape": "dot", "title": "168"}, {"id": 16, "label": 16, "shape": "dot", "title": "16"}, {"id": 17, "label": 17, "shape": "dot", "title": "17"}, {"id": 113, "label": 113, "shape": "dot", "title": "113"}, {"id": 235, "label": 235, "shape": "dot", "title": "235"}, {"id": 18, "label": 18, "shape": "dot", "title": "18"}, {"id": 204, "label": 204, "shape": "dot", "title": "204"}, {"id": 182, "label": 182, "shape": "dot", "title": "182"}, {"id": 20, "label": 20, "shape": "dot", "title": "20"}, {"id": 34, "label": 34, "shape": "dot", "title": "34"}, {"id": 166, "label": 166, "shape": "dot", "title": "166"}, {"id": 176, "label": 176, "shape": "dot", "title": "176"}, {"id": 205, "label": 205, "shape": "dot", "title": "205"}, {"id": 243, "label": 243, "shape": "dot", "title": "243"}, {"id": 228, "label": 228, "shape": "dot", "title": "228"}, {"id": 58, "label": 58, "shape": "dot", "title": "58"}, {"id": 154, "label": 154, "shape": "dot", "title": "154"}, {"id": 81, "label": 81, "shape": "dot", "title": "81"}, {"id": 23, "label": 23, "shape": "dot", "title": "23"}, {"id": 159, "label": 159, "shape": "dot", "title": "159"}, {"id": 28, "label": 28, "shape": "dot", "title": "28"}, {"id": 82, "label": 82, "shape": "dot", "title": "82"}, {"id": 196, "label": 196, "shape": "dot", "title": "196"}, {"id": 173, "label": 173, "shape": "dot", "title": "173"}, {"id": 33, "label": 33, "shape": "dot", "title": "33"}, {"id": 201, "label": 201, "shape": "dot", "title": "201"}, {"id": 36, "label": 36, "shape": "dot", "title": "36"}, {"id": 37, "label": 37, "shape": "dot", "title": "37"}, {"id": 207, "label": 207, "shape": "dot", "title": "207"}, {"id": 111, "label": 111, "shape": "dot", "title": "111"}, {"id": 97, "label": 97, "shape": "dot", "title": "97"}, {"id": 99, "label": 99, "shape": "dot", "title": "99"}, {"id": 165, "label": 165, "shape": "dot", "title": "165"}, {"id": 106, "label": 106, "shape": "dot", "title": "106"}, {"id": 239, "label": 239, "shape": "dot", "title": "239"}, {"id": 183, "label": 183, "shape": "dot", "title": "183"}, {"id": 122, "label": 122, "shape": "dot", "title": "122"}, {"id": 41, "label": 41, "shape": "dot", "title": "41"}, {"id": 64, "label": 64, "shape": "dot", "title": "64"}, {"id": 128, "label": 128, "shape": "dot", "title": "128"}, {"id": 45, "label": 45, "shape": "dot", "title": "45"}, {"id": 102, "label": 102, "shape": "dot", "title": "102"}, {"id": 104, "label": 104, "shape": "dot", "title": "104"}, {"id": 48, "label": 48, "shape": "dot", "title": "48"}, {"id": 242, "label": 242, "shape": "dot", "title": "242"}, {"id": 141, "label": 141, "shape": "dot", "title": "141"}, {"id": 49, "label": 49, "shape": "dot", "title": "49"}, {"id": 50, "label": 50, "shape": "dot", "title": "50"}, {"id": 181, "label": 181, "shape": "dot", "title": "181"}, {"id": 59, "label": 59, "shape": "dot", "title": "59"}, {"id": 55, "label": 55, "shape": "dot", "title": "55"}, {"id": 60, "label": 60, "shape": "dot", "title": "60"}, {"id": 127, "label": 127, "shape": "dot", "title": "127"}, {"id": 65, "label": 65, "shape": "dot", "title": "65"}, {"id": 211, "label": 211, "shape": "dot", "title": "211"}, {"id": 68, "label": 68, "shape": "dot", "title": "68"}, {"id": 69, "label": 69, "shape": "dot", "title": "69"}, {"id": 74, "label": 74, "shape": "dot", "title": "74"}, {"id": 199, "label": 199, "shape": "dot", "title": "199"}, {"id": 138, "label": 138, "shape": "dot", "title": "138"}, {"id": 148, "label": 148, "shape": "dot", "title": "148"}, {"id": 156, "label": 156, "shape": "dot", "title": "156"}, {"id": 215, "label": 215, "shape": "dot", "title": "215"}, {"id": 217, "label": 217, "shape": "dot", "title": "217"}, {"id": 223, "label": 223, "shape": "dot", "title": "223"}, {"id": 105, "label": 105, "shape": "dot", "title": "105"}, {"id": 246, "label": 246, "shape": "dot", "title": "246"}, {"id": 124, "label": 124, "shape": "dot", "title": "124"}, {"id": 234, "label": 234, "shape": "dot", "title": "234"}, {"id": 83, "label": 83, "shape": "dot", "title": "83"}, {"id": 87, "label": 87, "shape": "dot", "title": "87"}, {"id": 90, "label": 90, "shape": "dot", "title": "90"}, {"id": 94, "label": 94, "shape": "dot", "title": "94"}, {"id": 95, "label": 95, "shape": "dot", "title": "95"}, {"id": 171, "label": 171, "shape": "dot", "title": "171"}, {"id": 135, "label": 135, "shape": "dot", "title": "135"}, {"id": 218, "label": 218, "shape": "dot", "title": "218"}, {"id": 153, "label": 153, "shape": "dot", "title": "153"}, {"id": 103, "label": 103, "shape": "dot", "title": "103"}, {"id": 132, "label": 132, "shape": "dot", "title": "132"}, {"id": 222, "label": 222, "shape": "dot", "title": "222"}, {"id": 118, "label": 118, "shape": "dot", "title": "118"}, {"id": 167, "label": 167, "shape": "dot", "title": "167"}, {"id": 115, "label": 115, "shape": "dot", "title": "115"}, {"id": 231, "label": 231, "shape": "dot", "title": "231"}, {"id": 92, "label": 92, "shape": "dot", "title": "92"}, {"id": 220, "label": 220, "shape": "dot", "title": "220"}, {"id": 114, "label": 114, "shape": "dot", "title": "114"}, {"id": 120, "label": 120, "shape": "dot", "title": "120"}, {"id": 150, "label": 150, "shape": "dot", "title": "150"}, {"id": 121, "label": 121, "shape": "dot", "title": "121"}, {"id": 160, "label": 160, "shape": "dot", "title": "160"}, {"id": 131, "label": 131, "shape": "dot", "title": "131"}, {"id": 149, "label": 149, "shape": "dot", "title": "149"}, {"id": 143, "label": 143, "shape": "dot", "title": "143"}, {"id": 145, "label": 145, "shape": "dot", "title": "145"}, {"id": 0, "label": 0, "shape": "dot", "title": "0"}, {"id": 157, "label": 157, "shape": "dot", "title": "157"}, {"id": 158, "label": 158, "shape": "dot", "title": "158"}, {"id": 163, "label": 163, "shape": "dot", "title": "163"}, {"id": 194, "label": 194, "shape": "dot", "title": "194"}, {"id": 170, "label": 170, "shape": "dot", "title": "170"}, {"id": 179, "label": 179, "shape": "dot", "title": "179"}, {"id": 195, "label": 195, "shape": "dot", "title": "195"}, {"id": 198, "label": 198, "shape": "dot", "title": "198"}, {"id": 129, "label": 129, "shape": "dot", "title": "129"}, {"id": 240, "label": 240, "shape": "dot", "title": "240"}, {"id": 210, "label": 210, "shape": "dot", "title": "210"}, {"id": 225, "label": 225, "shape": "dot", "title": "225"}, {"id": 26, "label": 26, "shape": "dot", "title": "26"}, {"id": 172, "label": 172, "shape": "dot", "title": "172"}, {"id": 238, "label": 238, "shape": "dot", "title": "238"}]);
+        edges = new vis.DataSet([{"arrows": "from", "from": 2, "to": 249}, {"arrows": "from", "from": 2, "to": 75}, {"arrows": "from", "from": 2, "to": 237}, {"arrows": "from", "from": 2, "to": 85}, {"arrows": "from", "from": 3, "to": 144}, {"arrows": "from", "from": 3, "to": 209}, {"arrows": "from", "from": 3, "to": 109}, {"arrows": "from", "from": 3, "to": 227}, {"arrows": "from", "from": 3, "to": 21}, {"arrows": "from", "from": 3, "to": 75}, {"arrows": "from", "from": 3, "to": 108}, {"arrows": "from", "from": 3, "to": 237}, {"arrows": "from", "from": 3, "to": 125}, {"arrows": "from", "from": 6, "to": 177}, {"arrows": "from", "from": 10, "to": 44}, {"arrows": "from", "from": 10, "to": 237}, {"arrows": "from", "from": 10, "to": 30}, {"arrows": "from", "from": 10, "to": 39}, {"arrows": "from", "from": 11, "to": 15}, {"arrows": "from", "from": 13, "to": 248}, {"arrows": "from", "from": 13, "to": 236}, {"arrows": "from", "from": 13, "to": 237}, {"arrows": "from", "from": 13, "to": 174}, {"arrows": "from", "from": 14, "to": 100}, {"arrows": "from", "from": 14, "to": 85}, {"arrows": "from", "from": 14, "to": 54}, {"arrows": "from", "from": 14, "to": 216}, {"arrows": "from", "from": 14, "to": 57}, {"arrows": "from", "from": 14, "to": 202}, {"arrows": "from", "from": 14, "to": 221}, {"arrows": "from", "from": 15, "to": 168}, {"arrows": "from", "from": 16, "to": 237}, {"arrows": "from", "from": 17, "to": 113}, {"arrows": "from", "from": 17, "to": 235}, {"arrows": "from", "from": 18, "to": 204}, {"arrows": "from", "from": 18, "to": 237}, {"arrows": "from", "from": 18, "to": 182}, {"arrows": "from", "from": 20, "to": 182}, {"arrows": "from", "from": 21, "to": 34}, {"arrows": "from", "from": 21, "to": 100}, {"arrows": "from", "from": 21, "to": 166}, {"arrows": "from", "from": 21, "to": 209}, {"arrows": "from", "from": 21, "to": 44}, {"arrows": "from", "from": 21, "to": 75}, {"arrows": "from", "from": 21, "to": 236}, {"arrows": "from", "from": 21, "to": 237}, {"arrows": "from", "from": 21, "to": 109}, {"arrows": "from", "from": 21, "to": 176}, {"arrows": "from", "from": 21, "to": 177}, {"arrows": "from", "from": 21, "to": 205}, {"arrows": "from", "from": 21, "to": 243}, {"arrows": "from", "from": 21, "to": 182}, {"arrows": "from", "from": 21, "to": 216}, {"arrows": "from", "from": 21, "to": 228}, {"arrows": "from", "from": 21, "to": 58}, {"arrows": "from", "from": 21, "to": 154}, {"arrows": "from", "from": 21, "to": 81}, {"arrows": "from", "from": 23, "to": 227}, {"arrows": "from", "from": 23, "to": 159}, {"arrows": "from", "from": 28, "to": 82}, {"arrows": "from", "from": 28, "to": 228}, {"arrows": "from", "from": 28, "to": 54}, {"arrows": "from", "from": 28, "to": 196}, {"arrows": "from", "from": 28, "to": 154}, {"arrows": "from", "from": 28, "to": 75}, {"arrows": "from", "from": 28, "to": 236}, {"arrows": "from", "from": 28, "to": 237}, {"arrows": "from", "from": 30, "to": 39}, {"arrows": "from", "from": 30, "to": 75}, {"arrows": "from", "from": 30, "to": 44}, {"arrows": "from", "from": 30, "to": 173}, {"arrows": "from", "from": 30, "to": 237}, {"arrows": "from", "from": 33, "to": 237}, {"arrows": "from", "from": 34, "to": 82}, {"arrows": "from", "from": 34, "to": 85}, {"arrows": "from", "from": 34, "to": 182}, {"arrows": "from", "from": 34, "to": 201}, {"arrows": "from", "from": 34, "to": 236}, {"arrows": "from", "from": 34, "to": 237}, {"arrows": "from", "from": 36, "to": 236}, {"arrows": "from", "from": 36, "to": 21}, {"arrows": "from", "from": 37, "to": 237}, {"arrows": "from", "from": 39, "to": 44}, {"arrows": "from", "from": 39, "to": 75}, {"arrows": "from", "from": 39, "to": 204}, {"arrows": "from", "from": 39, "to": 205}, {"arrows": "from", "from": 39, "to": 207}, {"arrows": "from", "from": 39, "to": 209}, {"arrows": "from", "from": 39, "to": 82}, {"arrows": "from", "from": 39, "to": 85}, {"arrows": "from", "from": 39, "to": 154}, {"arrows": "from", "from": 39, "to": 111}, {"arrows": "from", "from": 39, "to": 97}, {"arrows": "from", "from": 39, "to": 99}, {"arrows": "from", "from": 39, "to": 228}, {"arrows": "from", "from": 39, "to": 165}, {"arrows": "from", "from": 39, "to": 166}, {"arrows": "from", "from": 39, "to": 168}, {"arrows": "from", "from": 39, "to": 106}, {"arrows": "from", "from": 39, "to": 236}, {"arrows": "from", "from": 39, "to": 237}, {"arrows": "from", "from": 39, "to": 239}, {"arrows": "from", "from": 39, "to": 182}, {"arrows": "from", "from": 39, "to": 183}, {"arrows": "from", "from": 39, "to": 57}, {"arrows": "from", "from": 39, "to": 122}, {"arrows": "from", "from": 39, "to": 21}, {"arrows": "from", "from": 41, "to": 237}, {"arrows": "from", "from": 44, "to": 64}, {"arrows": "from", "from": 44, "to": 128}, {"arrows": "from", "from": 44, "to": 209}, {"arrows": "from", "from": 44, "to": 237}, {"arrows": "from", "from": 45, "to": 82}, {"arrows": "from", "from": 45, "to": 243}, {"arrows": "from", "from": 45, "to": 182}, {"arrows": "from", "from": 45, "to": 102}, {"arrows": "from", "from": 45, "to": 104}, {"arrows": "from", "from": 45, "to": 111}, {"arrows": "from", "from": 45, "to": 75}, {"arrows": "from", "from": 45, "to": 237}, {"arrows": "from", "from": 45, "to": 174}, {"arrows": "from", "from": 45, "to": 221}, {"arrows": "from", "from": 48, "to": 128}, {"arrows": "from", "from": 48, "to": 242}, {"arrows": "from", "from": 48, "to": 237}, {"arrows": "from", "from": 48, "to": 39}, {"arrows": "from", "from": 48, "to": 173}, {"arrows": "from", "from": 48, "to": 141}, {"arrows": "from", "from": 49, "to": 75}, {"arrows": "from", "from": 50, "to": 181}, {"arrows": "from", "from": 50, "to": 141}, {"arrows": "from", "from": 54, "to": 82}, {"arrows": "from", "from": 54, "to": 196}, {"arrows": "from", "from": 54, "to": 165}, {"arrows": "from", "from": 54, "to": 202}, {"arrows": "from", "from": 54, "to": 228}, {"arrows": "from", "from": 54, "to": 58}, {"arrows": "from", "from": 54, "to": 59}, {"arrows": "from", "from": 54, "to": 236}, {"arrows": "from", "from": 54, "to": 154}, {"arrows": "from", "from": 54, "to": 237}, {"arrows": "from", "from": 55, "to": 209}, {"arrows": "from", "from": 55, "to": 75}, {"arrows": "from", "from": 55, "to": 237}, {"arrows": "from", "from": 57, "to": 176}, {"arrows": "from", "from": 57, "to": 228}, {"arrows": "from", "from": 57, "to": 85}, {"arrows": "from", "from": 57, "to": 236}, {"arrows": "from", "from": 57, "to": 237}, {"arrows": "from", "from": 57, "to": 21}, {"arrows": "from", "from": 58, "to": 176}, {"arrows": "from", "from": 58, "to": 82}, {"arrows": "from", "from": 58, "to": 100}, {"arrows": "from", "from": 58, "to": 201}, {"arrows": "from", "from": 58, "to": 237}, {"arrows": "from", "from": 59, "to": 236}, {"arrows": "from", "from": 60, "to": 111}, {"arrows": "from", "from": 60, "to": 237}, {"arrows": "from", "from": 60, "to": 228}, {"arrows": "from", "from": 60, "to": 181}, {"arrows": "from", "from": 60, "to": 127}, {"arrows": "from", "from": 64, "to": 209}, {"arrows": "from", "from": 64, "to": 173}, {"arrows": "from", "from": 64, "to": 237}, {"arrows": "from", "from": 65, "to": 113}, {"arrows": "from", "from": 65, "to": 211}, {"arrows": "from", "from": 65, "to": 166}, {"arrows": "from", "from": 65, "to": 104}, {"arrows": "from", "from": 65, "to": 122}, {"arrows": "from", "from": 65, "to": 108}, {"arrows": "from", "from": 65, "to": 237}, {"arrows": "from", "from": 65, "to": 111}, {"arrows": "from", "from": 68, "to": 237}, {"arrows": "from", "from": 69, "to": 75}, {"arrows": "from", "from": 69, "to": 237}, {"arrows": "from", "from": 74, "to": 236}, {"arrows": "from", "from": 74, "to": 100}, {"arrows": "from", "from": 74, "to": 181}, {"arrows": "from", "from": 74, "to": 182}, {"arrows": "from", "from": 74, "to": 199}, {"arrows": "from", "from": 75, "to": 128}, {"arrows": "from", "from": 75, "to": 236}, {"arrows": "from", "from": 75, "to": 138}, {"arrows": "from", "from": 75, "to": 109}, {"arrows": "from", "from": 75, "to": 148}, {"arrows": "from", "from": 75, "to": 154}, {"arrows": "from", "from": 75, "to": 165}, {"arrows": "from", "from": 75, "to": 166}, {"arrows": "from", "from": 75, "to": 156}, {"arrows": "from", "from": 75, "to": 177}, {"arrows": "from", "from": 75, "to": 181}, {"arrows": "from", "from": 75, "to": 182}, {"arrows": "from", "from": 75, "to": 183}, {"arrows": "from", "from": 75, "to": 57}, {"arrows": "from", "from": 75, "to": 196}, {"arrows": "from", "from": 75, "to": 74}, {"arrows": "from", "from": 75, "to": 205}, {"arrows": "from", "from": 75, "to": 207}, {"arrows": "from", "from": 75, "to": 209}, {"arrows": "from", "from": 75, "to": 82}, {"arrows": "from", "from": 75, "to": 85}, {"arrows": "from", "from": 75, "to": 215}, {"arrows": "from", "from": 75, "to": 217}, {"arrows": "from", "from": 75, "to": 228}, {"arrows": "from", "from": 75, "to": 221}, {"arrows": "from", "from": 75, "to": 223}, {"arrows": "from", "from": 75, "to": 227}, {"arrows": "from", "from": 75, "to": 100}, {"arrows": "from", "from": 75, "to": 104}, {"arrows": "from", "from": 75, "to": 105}, {"arrows": "from", "from": 75, "to": 106}, {"arrows": "from", "from": 75, "to": 108}, {"arrows": "from", "from": 75, "to": 237}, {"arrows": "from", "from": 75, "to": 111}, {"arrows": "from", "from": 75, "to": 242}, {"arrows": "from", "from": 75, "to": 246}, {"arrows": "from", "from": 75, "to": 122}, {"arrows": "from", "from": 75, "to": 124}, {"arrows": "from", "from": 75, "to": 125}, {"arrows": "from", "from": 81, "to": 236}, {"arrows": "from", "from": 81, "to": 237}, {"arrows": "from", "from": 82, "to": 196}, {"arrows": "from", "from": 82, "to": 108}, {"arrows": "from", "from": 82, "to": 205}, {"arrows": "from", "from": 82, "to": 237}, {"arrows": "from", "from": 82, "to": 21}, {"arrows": "from", "from": 82, "to": 228}, {"arrows": "from", "from": 82, "to": 154}, {"arrows": "from", "from": 82, "to": 221}, {"arrows": "from", "from": 82, "to": 176}, {"arrows": "from", "from": 82, "to": 100}, {"arrows": "from", "from": 82, "to": 166}, {"arrows": "from", "from": 82, "to": 104}, {"arrows": "from", "from": 82, "to": 234}, {"arrows": "from", "from": 82, "to": 236}, {"arrows": "from", "from": 82, "to": 109}, {"arrows": "from", "from": 82, "to": 111}, {"arrows": "from", "from": 82, "to": 48}, {"arrows": "from", "from": 82, "to": 113}, {"arrows": "from", "from": 82, "to": 243}, {"arrows": "from", "from": 82, "to": 181}, {"arrows": "from", "from": 82, "to": 182}, {"arrows": "from", "from": 82, "to": 201}, {"arrows": "from", "from": 82, "to": 122}, {"arrows": "from", "from": 82, "to": 85}, {"arrows": "from", "from": 83, "to": 237}, {"arrows": "from", "from": 85, "to": 228}, {"arrows": "from", "from": 85, "to": 104}, {"arrows": "from", "from": 85, "to": 236}, {"arrows": "from", "from": 85, "to": 237}, {"arrows": "from", "from": 85, "to": 176}, {"arrows": "from", "from": 85, "to": 21}, {"arrows": "from", "from": 85, "to": 249}, {"arrows": "from", "from": 85, "to": 217}, {"arrows": "from", "from": 87, "to": 237}, {"arrows": "from", "from": 90, "to": 128}, {"arrows": "from", "from": 90, "to": 216}, {"arrows": "from", "from": 90, "to": 21}, {"arrows": "from", "from": 90, "to": 237}, {"arrows": "from", "from": 94, "to": 237}, {"arrows": "from", "from": 95, "to": 237}, {"arrows": "from", "from": 97, "to": 171}, {"arrows": "from", "from": 97, "to": 166}, {"arrows": "from", "from": 97, "to": 135}, {"arrows": "from", "from": 97, "to": 105}, {"arrows": "from", "from": 97, "to": 218}, {"arrows": "from", "from": 97, "to": 108}, {"arrows": "from", "from": 97, "to": 237}, {"arrows": "from", "from": 97, "to": 174}, {"arrows": "from", "from": 99, "to": 45}, {"arrows": "from", "from": 99, "to": 199}, {"arrows": "from", "from": 100, "to": 128}, {"arrows": "from", "from": 100, "to": 102}, {"arrows": "from", "from": 100, "to": 201}, {"arrows": "from", "from": 100, "to": 109}, {"arrows": "from", "from": 100, "to": 237}, {"arrows": "from", "from": 100, "to": 176}, {"arrows": "from", "from": 100, "to": 182}, {"arrows": "from", "from": 100, "to": 181}, {"arrows": "from", "from": 102, "to": 39}, {"arrows": "from", "from": 102, "to": 168}, {"arrows": "from", "from": 102, "to": 236}, {"arrows": "from", "from": 102, "to": 109}, {"arrows": "from", "from": 102, "to": 237}, {"arrows": "from", "from": 102, "to": 141}, {"arrows": "from", "from": 102, "to": 205}, {"arrows": "from", "from": 102, "to": 85}, {"arrows": "from", "from": 102, "to": 182}, {"arrows": "from", "from": 102, "to": 153}, {"arrows": "from", "from": 103, "to": 221}, {"arrows": "from", "from": 103, "to": 132}, {"arrows": "from", "from": 103, "to": 111}, {"arrows": "from", "from": 103, "to": 236}, {"arrows": "from", "from": 103, "to": 237}, {"arrows": "from", "from": 103, "to": 222}, {"arrows": "from", "from": 103, "to": 125}, {"arrows": "from", "from": 104, "to": 182}, {"arrows": "from", "from": 104, "to": 168}, {"arrows": "from", "from": 104, "to": 237}, {"arrows": "from", "from": 104, "to": 174}, {"arrows": "from", "from": 105, "to": 113}, {"arrows": "from", "from": 105, "to": 228}, {"arrows": "from", "from": 105, "to": 118}, {"arrows": "from", "from": 105, "to": 167}, {"arrows": "from", "from": 105, "to": 108}, {"arrows": "from", "from": 105, "to": 237}, {"arrows": "from", "from": 105, "to": 109}, {"arrows": "from", "from": 106, "to": 168}, {"arrows": "from", "from": 106, "to": 236}, {"arrows": "from", "from": 106, "to": 237}, {"arrows": "from", "from": 106, "to": 111}, {"arrows": "from", "from": 108, "to": 228}, {"arrows": "from", "from": 108, "to": 166}, {"arrows": "from", "from": 108, "to": 209}, {"arrows": "from", "from": 108, "to": 104}, {"arrows": "from", "from": 108, "to": 237}, {"arrows": "from", "from": 108, "to": 173}, {"arrows": "from", "from": 108, "to": 113}, {"arrows": "from", "from": 108, "to": 217}, {"arrows": "from", "from": 108, "to": 122}, {"arrows": "from", "from": 108, "to": 127}, {"arrows": "from", "from": 109, "to": 227}, {"arrows": "from", "from": 109, "to": 177}, {"arrows": "from", "from": 109, "to": 202}, {"arrows": "from", "from": 109, "to": 135}, {"arrows": "from", "from": 109, "to": 236}, {"arrows": "from", "from": 109, "to": 237}, {"arrows": "from", "from": 109, "to": 111}, {"arrows": "from", "from": 109, "to": 209}, {"arrows": "from", "from": 109, "to": 115}, {"arrows": "from", "from": 109, "to": 182}, {"arrows": "from", "from": 109, "to": 58}, {"arrows": "from", "from": 111, "to": 196}, {"arrows": "from", "from": 111, "to": 102}, {"arrows": "from", "from": 111, "to": 231}, {"arrows": "from", "from": 111, "to": 104}, {"arrows": "from", "from": 111, "to": 28}, {"arrows": "from", "from": 111, "to": 236}, {"arrows": "from", "from": 111, "to": 237}, {"arrows": "from", "from": 111, "to": 92}, {"arrows": "from", "from": 111, "to": 209}, {"arrows": "from", "from": 111, "to": 113}, {"arrows": "from", "from": 111, "to": 182}, {"arrows": "from", "from": 111, "to": 153}, {"arrows": "from", "from": 111, "to": 207}, {"arrows": "from", "from": 111, "to": 220}, {"arrows": "from", "from": 111, "to": 95}, {"arrows": "from", "from": 113, "to": 166}, {"arrows": "from", "from": 113, "to": 237}, {"arrows": "from", "from": 114, "to": 237}, {"arrows": "from", "from": 114, "to": 182}, {"arrows": "from", "from": 115, "to": 237}, {"arrows": "from", "from": 118, "to": 237}, {"arrows": "from", "from": 120, "to": 221}, {"arrows": "from", "from": 120, "to": 150}, {"arrows": "from", "from": 121, "to": 154}, {"arrows": "from", "from": 122, "to": 209}, {"arrows": "from", "from": 122, "to": 237}, {"arrows": "from", "from": 124, "to": 160}, {"arrows": "from", "from": 124, "to": 111}, {"arrows": "from", "from": 125, "to": 237}, {"arrows": "from", "from": 125, "to": 182}, {"arrows": "from", "from": 127, "to": 215}, {"arrows": "from", "from": 128, "to": 81}, {"arrows": "from", "from": 128, "to": 181}, {"arrows": "from", "from": 128, "to": 216}, {"arrows": "from", "from": 128, "to": 20}, {"arrows": "from", "from": 128, "to": 237}, {"arrows": "from", "from": 131, "to": 236}, {"arrows": "from", "from": 131, "to": 149}, {"arrows": "from", "from": 132, "to": 237}, {"arrows": "from", "from": 132, "to": 199}, {"arrows": "from", "from": 141, "to": 209}, {"arrows": "from", "from": 141, "to": 39}, {"arrows": "from", "from": 141, "to": 55}, {"arrows": "from", "from": 141, "to": 44}, {"arrows": "from", "from": 141, "to": 237}, {"arrows": "from", "from": 141, "to": 109}, {"arrows": "from", "from": 143, "to": 237}, {"arrows": "from", "from": 143, "to": 182}, {"arrows": "from", "from": 145, "to": 237}, {"arrows": "from", "from": 148, "to": 0}, {"arrows": "from", "from": 148, "to": 237}, {"arrows": "from", "from": 150, "to": 221}, {"arrows": "from", "from": 150, "to": 237}, {"arrows": "from", "from": 153, "to": 237}, {"arrows": "from", "from": 154, "to": 177}, {"arrows": "from", "from": 154, "to": 228}, {"arrows": "from", "from": 154, "to": 209}, {"arrows": "from", "from": 154, "to": 104}, {"arrows": "from", "from": 154, "to": 105}, {"arrows": "from", "from": 154, "to": 59}, {"arrows": "from", "from": 157, "to": 237}, {"arrows": "from", "from": 158, "to": 237}, {"arrows": "from", "from": 159, "to": 227}, {"arrows": "from", "from": 160, "to": 237}, {"arrows": "from", "from": 163, "to": 207}, {"arrows": "from", "from": 163, "to": 237}, {"arrows": "from", "from": 163, "to": 174}, {"arrows": "from", "from": 163, "to": 111}, {"arrows": "from", "from": 165, "to": 176}, {"arrows": "from", "from": 165, "to": 60}, {"arrows": "from", "from": 165, "to": 237}, {"arrows": "from", "from": 166, "to": 194}, {"arrows": "from", "from": 166, "to": 209}, {"arrows": "from", "from": 166, "to": 45}, {"arrows": "from", "from": 166, "to": 237}, {"arrows": "from", "from": 166, "to": 182}, {"arrows": "from", "from": 166, "to": 217}, {"arrows": "from", "from": 166, "to": 111}, {"arrows": "from", "from": 167, "to": 237}, {"arrows": "from", "from": 168, "to": 160}, {"arrows": "from", "from": 168, "to": 227}, {"arrows": "from", "from": 168, "to": 182}, {"arrows": "from", "from": 168, "to": 236}, {"arrows": "from", "from": 168, "to": 237}, {"arrows": "from", "from": 168, "to": 174}, {"arrows": "from", "from": 170, "to": 237}, {"arrows": "from", "from": 170, "to": 141}, {"arrows": "from", "from": 173, "to": 10}, {"arrows": "from", "from": 173, "to": 237}, {"arrows": "from", "from": 174, "to": 243}, {"arrows": "from", "from": 174, "to": 199}, {"arrows": "from", "from": 174, "to": 111}, {"arrows": "from", "from": 174, "to": 237}, {"arrows": "from", "from": 176, "to": 182}, {"arrows": "from", "from": 176, "to": 201}, {"arrows": "from", "from": 176, "to": 237}, {"arrows": "from", "from": 177, "to": 209}, {"arrows": "from", "from": 177, "to": 227}, {"arrows": "from", "from": 177, "to": 39}, {"arrows": "from", "from": 177, "to": 205}, {"arrows": "from", "from": 177, "to": 13}, {"arrows": "from", "from": 179, "to": 105}, {"arrows": "from", "from": 179, "to": 237}, {"arrows": "from", "from": 181, "to": 209}, {"arrows": "from", "from": 181, "to": 201}, {"arrows": "from", "from": 181, "to": 237}, {"arrows": "from", "from": 182, "to": 0}, {"arrows": "from", "from": 182, "to": 196}, {"arrows": "from", "from": 182, "to": 201}, {"arrows": "from", "from": 182, "to": 209}, {"arrows": "from", "from": 182, "to": 237}, {"arrows": "from", "from": 182, "to": 216}, {"arrows": "from", "from": 182, "to": 28}, {"arrows": "from", "from": 182, "to": 228}, {"arrows": "from", "from": 182, "to": 236}, {"arrows": "from", "from": 182, "to": 60}, {"arrows": "from", "from": 182, "to": 127}, {"arrows": "from", "from": 194, "to": 217}, {"arrows": "from", "from": 194, "to": 104}, {"arrows": "from", "from": 194, "to": 105}, {"arrows": "from", "from": 194, "to": 236}, {"arrows": "from", "from": 194, "to": 237}, {"arrows": "from", "from": 195, "to": 205}, {"arrows": "from", "from": 196, "to": 39}, {"arrows": "from", "from": 196, "to": 236}, {"arrows": "from", "from": 196, "to": 237}, {"arrows": "from", "from": 198, "to": 236}, {"arrows": "from", "from": 199, "to": 129}, {"arrows": "from", "from": 199, "to": 221}, {"arrows": "from", "from": 199, "to": 237}, {"arrows": "from", "from": 199, "to": 45}, {"arrows": "from", "from": 201, "to": 236}, {"arrows": "from", "from": 201, "to": 237}, {"arrows": "from", "from": 202, "to": 237}, {"arrows": "from", "from": 204, "to": 75}, {"arrows": "from", "from": 204, "to": 237}, {"arrows": "from", "from": 204, "to": 109}, {"arrows": "from", "from": 205, "to": 128}, {"arrows": "from", "from": 205, "to": 182}, {"arrows": "from", "from": 205, "to": 111}, {"arrows": "from", "from": 205, "to": 236}, {"arrows": "from", "from": 207, "to": 240}, {"arrows": "from", "from": 207, "to": 237}, {"arrows": "from", "from": 207, "to": 21}, {"arrows": "from", "from": 207, "to": 243}, {"arrows": "from", "from": 207, "to": 109}, {"arrows": "from", "from": 207, "to": 181}, {"arrows": "from", "from": 209, "to": 227}, {"arrows": "from", "from": 209, "to": 228}, {"arrows": "from", "from": 209, "to": 236}, {"arrows": "from", "from": 209, "to": 82}, {"arrows": "from", "from": 209, "to": 237}, {"arrows": "from", "from": 209, "to": 217}, {"arrows": "from", "from": 210, "to": 237}, {"arrows": "from", "from": 215, "to": 228}, {"arrows": "from", "from": 215, "to": 182}, {"arrows": "from", "from": 216, "to": 111}, {"arrows": "from", "from": 216, "to": 237}, {"arrows": "from", "from": 217, "to": 228}, {"arrows": "from", "from": 217, "to": 65}, {"arrows": "from", "from": 217, "to": 122}, {"arrows": "from", "from": 217, "to": 237}, {"arrows": "from", "from": 218, "to": 237}, {"arrows": "from", "from": 220, "to": 221}, {"arrows": "from", "from": 221, "to": 236}, {"arrows": "from", "from": 221, "to": 237}, {"arrows": "from", "from": 221, "to": 111}, {"arrows": "from", "from": 221, "to": 60}, {"arrows": "from", "from": 225, "to": 131}, {"arrows": "from", "from": 227, "to": 148}, {"arrows": "from", "from": 228, "to": 102}, {"arrows": "from", "from": 228, "to": 74}, {"arrows": "from", "from": 228, "to": 236}, {"arrows": "from", "from": 228, "to": 109}, {"arrows": "from", "from": 228, "to": 237}, {"arrows": "from", "from": 234, "to": 237}, {"arrows": "from", "from": 234, "to": 182}, {"arrows": "from", "from": 235, "to": 108}, {"arrows": "from", "from": 235, "to": 237}, {"arrows": "from", "from": 236, "to": 10}, {"arrows": "from", "from": 236, "to": 207}, {"arrows": "from", "from": 236, "to": 217}, {"arrows": "from", "from": 236, "to": 165}, {"arrows": "from", "from": 236, "to": 104}, {"arrows": "from", "from": 236, "to": 108}, {"arrows": "from", "from": 236, "to": 237}, {"arrows": "from", "from": 236, "to": 55}, {"arrows": "from", "from": 237, "to": 6}, {"arrows": "from", "from": 237, "to": 15}, {"arrows": "from", "from": 237, "to": 26}, {"arrows": "from", "from": 237, "to": 154}, {"arrows": "from", "from": 237, "to": 172}, {"arrows": "from", "from": 237, "to": 238}, {"arrows": "from", "from": 237, "to": 242}, {"arrows": "from", "from": 237, "to": 243}, {"arrows": "from", "from": 237, "to": 249}, {"arrows": "from", "from": 239, "to": 75}, {"arrows": "from", "from": 243, "to": 111}]);
+
+        // adding nodes and edges to the graph
+        data = {nodes: nodes, edges: edges};
+
+        var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": false,
+            "type": "continuous"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+        
+        
+
+        // default to using dot shape for nodes
+        options.nodes = {
+            shape: "dot"
+        }
+        
+        // if this network requires displaying the configure window,
+        // put it in its div
+        options.configure["container"] = document.getElementById("config");
+        
+
+        network = new vis.Network(container, data, options);
+
+        
+
+
+        
+        network.on("stabilizationProgress", function(params) {
+      		document.getElementById('loadingBar').removeAttribute("style");
+	        var maxWidth = 496;
+	        var minWidth = 20;
+	        var widthFactor = params.iterations/params.total;
+	        var width = Math.max(minWidth,maxWidth * widthFactor);
+
+	        document.getElementById('bar').style.width = width + 'px';
+	        document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+	    });
+	    network.once("stabilizationIterationsDone", function() {
+	        document.getElementById('text').innerHTML = '100%';
+	        document.getElementById('bar').style.width = '496px';
+	        document.getElementById('loadingBar').style.opacity = 0;
+	        // really clean the dom element
+	        setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+	    });
+        
+
+        return network;
+
+    }
+
+    drawGraph();
+
+</script>
+</body>
+</html>
