@@ -329,7 +329,7 @@ def count_different_signed_edges(dgraph):
 def compute_edge_balance(
         dgraph: nx.DiGraph,
         no_isomorph_cycles: bool = False) -> Dict[tuple, Dict[str, int]]:
-    """Computes edge balance based on Van De Rijt idea.
+    """Computes edge balance based on Van De Rijt (2011).
 
     With no_isomorph_cycles=True, we can get the number of cycles and edge
         is not meaningful. However, with no_isomorph_cycles=False, for every
@@ -349,51 +349,73 @@ def compute_edge_balance(
     Raises:
         None
     """
-    edge_balance = {}
-    cycle3s = set()
-
+    edge_sign = {}
     for edge in dgraph.edges():
-        triad_count = 0
-        balanced_count = 0
-        weight_sum = 0
-        weight_distance = 0
+        nodes3 = 0
+        balanced_node3 = 0
 
         nodes = list(set(dgraph.nodes()) - set(edge))
         xij = dgraph.get_edge_data(edge[0], edge[1])['weight']
         for node in nodes:
-            if dgraph.has_edge(
-                    edge[1], node) and dgraph.has_edge(node, edge[0]):
-                triad_str = ','.join((str(edge[1]), str(node), str(edge[0])))
-                if not no_isomorph_cycles or (
-                        no_isomorph_cycles and (triad_str not in cycle3s)):
-                    if triad_str not in cycle3s:
-                        triad_isomorph1_str = ','.join(
-                            (str(edge[0]), str(edge[1]), str(node)))
-                        triad_isomorph2_str = ','.join(
-                            (str(node), str(edge[0]), str(edge[1])))
-                        cycle3s = cycle3s.union(
-                            set([triad_str,
-                                 triad_isomorph1_str,
-                                 triad_isomorph2_str]))
+            if dgraph.has_edge(edge[0], node) and dgraph.has_edge(node, edge[1]):
+                xik = dgraph.get_edge_data(edge[0], node)['weight']
+                xkj = dgraph.get_edge_data(node, edge[1])['weight']
 
-                    triad_count += 1
-                    xik = dgraph.get_edge_data(edge[1], node)['weight']
-                    xkj = dgraph.get_edge_data(node, edge[0])['weight']
+                nodes3 += 1
+                if np.sign(xij * xik * xkj) > 0:
+                    balanced_node3 += 1
 
-                    weight_sum += np.sign(xik) * np.sign(xkj)
+        if nodes3:
+            edge_sign[edge] = {
+                'balanced_node3': balanced_node3,
+                'nodes3': nodes3}
+    return edge_sign
 
-                    weight_distance += abs(xij - (xik * xkj))
-                    if np.sign(xij * xik * xkj) > 0:
-                        balanced_count += 1
+    # edge_balance = {}
+    # cycle3s = set()
 
-        if triad_count:
-            as_expected_sign = int(np.sign(weight_sum) == np.sign(xij))
-            edge_balance[edge] = {
-                '#balanced': balanced_count,
-                '#cycle3': triad_count,
-                'weight_distance': weight_distance,
-                'as_expected_sign': as_expected_sign}
-    return edge_balance
+    # for edge in dgraph.edges():
+    #     triad_count = 0
+    #     balanced_count = 0
+    #     weight_sum = 0
+    #     weight_distance = 0
+
+    #     nodes = list(set(dgraph.nodes()) - set(edge))
+    #     xij = dgraph.get_edge_data(edge[0], edge[1])['weight']
+    #     for node in nodes:
+    #         if dgraph.has_edge(
+    #                 edge[1], node) and dgraph.has_edge(node, edge[0]):
+    #             triad_str = ','.join((str(edge[1]), str(node), str(edge[0])))
+    #             if not no_isomorph_cycles or (
+    #                     no_isomorph_cycles and (triad_str not in cycle3s)):
+    #                 if triad_str not in cycle3s:
+    #                     triad_isomorph1_str = ','.join(
+    #                         (str(edge[0]), str(edge[1]), str(node)))
+    #                     triad_isomorph2_str = ','.join(
+    #                         (str(node), str(edge[0]), str(edge[1])))
+    #                     cycle3s = cycle3s.union(
+    #                         set([triad_str,
+    #                              triad_isomorph1_str,
+    #                              triad_isomorph2_str]))
+
+    #                 triad_count += 1
+    #                 xik = dgraph.get_edge_data(edge[1], node)['weight']
+    #                 xkj = dgraph.get_edge_data(node, edge[0])['weight']
+
+    #                 weight_sum += np.sign(xik) * np.sign(xkj)
+
+    #                 weight_distance += abs(xij - (xik * xkj))
+    #                 if np.sign(xij * xik * xkj) > 0:
+    #                     balanced_count += 1
+
+    #     if triad_count:
+    #         as_expected_sign = int(np.sign(weight_sum) == np.sign(xij))
+    #         edge_balance[edge] = {
+    #             '#balanced': balanced_count,
+    #             '#cycle3': triad_count,
+    #             'weight_distance': weight_distance,
+    #             'as_expected_sign': as_expected_sign}
+    # return edge_balance
 
 
 # @enforce.runtime_validation
@@ -518,7 +540,7 @@ def is_sparsely_transitive_balanced(triad: np.ndarray) -> bool:
     """Checks whether input triad matrix is transitively balanced or not.
 
     Transitive balance is defined on only one rule:
-    Friend of friend is friend.
+        Friend of friend is friend.
 
     Args:
         triad: Input triad matrix.
