@@ -181,7 +181,7 @@ class MyTestClass(unittest.TestCase):
             'weights min': -1,
             'weights std': 1
         }
-#         utils.print_dict_pretty(computed)
+        # utils.print_dict_pretty(computed)
 #         self.assertDictEqual(computed, expected)
         for key, value in expected.items():
             self.assertAlmostEqual(value, computed[key], places=3)
@@ -252,100 +252,143 @@ class MyTestClass(unittest.TestCase):
         self.assertEqual(network_utils.count_different_signed_edges(dg), 2)
 
     # =========================================================================
-    # ====================== compute_edge_balance =============================
+    # ====================== compute_vanderijt_edge_balance ===================
     # =========================================================================
-    @parameterized.expand(
-        [["no_isomorph_cycles", False], ["no_isomorph_cycles", True]])
-    def test_compute_edge_balance_small_graph(self, name, no_isomorph_cycles):
+    def test_compute_vanderijt_edge_balance_small_graph(self):
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3])
         dg.add_edge(1, 2, weight=1)
         dg.add_edge(2, 1, weight=1)
         dg.add_edge(2, 3, weight=-5)
         dg.add_edge(3, 1, weight=-2)
-        if no_isomorph_cycles:
-            expected = {
-                (1, 2): {
-                    '#balanced': 1,
-                    '#cycle3': 1,
-                    'weight_distance': 9,
-                    'as_expected_sign': True}}
-        else:
-            expected = {
-                (1, 2): {
-                    '#balanced': 1,
-                    '#cycle3': 1,
-                    'weight_distance': 9,
-                    'as_expected_sign': True},
-                (3, 1): {
-                    '#balanced': 1,
-                    '#cycle3': 1,
-                    'weight_distance': 3,
-                    'as_expected_sign': True},
-                (2, 3): {
-                    '#balanced': 1,
-                    '#cycle3': 1,
-                    'weight_distance': 3,
-                    'as_expected_sign': True}}
-        computed = network_utils.compute_edge_balance(
-            dg, no_isomorph_cycles=no_isomorph_cycles)
+        expected = {(2, 1): {'#nodes3': 1, '#balanced_node3': 1}}
+        computed = network_utils.compute_vanderijt_edge_balance(dg)
         self.assertDictEqual(computed, expected)
 
-    @parameterized.expand(
-        [["no_isomorph_cycles", False],
-            ["no_isomorph_cycles", True]])
-    def test_compute_edge_balance_allnegative_graph(
-            self, name, no_isomorph_cycles):
+    def test_compute_vanderijt_edge_balance_allnegative_graph(self):
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3, 4])
         dg.add_edge(1, 2, weight=-1)
         dg.add_edge(2, 3, weight=-1)
+        dg.add_edge(1, 3, weight=-1)
+        dg.add_edge(2, 4, weight=-1)
+        dg.add_edge(4, 2, weight=-1)
+        dg.add_edge(2, 1, weight=1)
+        dg.add_edge(3, 2, weight=1)
         dg.add_edge(3, 1, weight=-1)
+        dg.add_edge(4, 1, weight=-5)
         dg.add_edge(1, 4, weight=-5)
         dg.add_edge(4, 3, weight=-2)
-        if no_isomorph_cycles:
-            expected = {
-                (1, 2): {
-                    '#balanced': 0,
-                    '#cycle3': 1,
-                    'weight_distance': 2,
-                    'as_expected_sign': False},
-                (1, 4): {
-                    '#balanced': 0,
-                    '#cycle3': 1,
-                    'weight_distance': 7,
-                    'as_expected_sign': False}}
-        else:
-            expected = {
-                (1, 2): {
-                    '#balanced': 0,
-                    '#cycle3': 1,
-                    'weight_distance': 2,
-                    'as_expected_sign': False},
-                (1, 4): {
-                    '#balanced': 0,
-                    '#cycle3': 1,
-                    'weight_distance': 7,
-                    'as_expected_sign': False},
-                (2, 3): {
-                    '#balanced': 0,
-                    '#cycle3': 1,
-                    'weight_distance': 2,
-                    'as_expected_sign': False},
-                (3, 1): {
-                    '#balanced': 0,
-                    '#cycle3': 2,
-                    'weight_distance': 13,
-                    'as_expected_sign': False},
-                (4, 3): {
-                    '#balanced': 0,
-                    '#cycle3': 1,
-                    'weight_distance': 7,
-                    'as_expected_sign': False}}
-
-        computed = network_utils.compute_edge_balance(
-            dg, no_isomorph_cycles=no_isomorph_cycles)
+        dg.add_edge(3, 4, weight=1)
+        expected = {
+            (1, 2): {'#balanced_node3': 1, '#nodes3': 2},
+            (3, 2): {'#balanced_node3': 1, '#nodes3': 2},
+            (1, 3): {'#balanced_node3': 0, '#nodes3': 2},
+            (3, 4): {'#balanced_node3': 1, '#nodes3': 2},
+            (3, 1): {'#balanced_node3': 1, '#nodes3': 2},
+            (1, 4): {'#balanced_node3': 1, '#nodes3': 2},
+            (2, 3): {'#balanced_node3': 1, '#nodes3': 2},
+            (2, 1): {'#balanced_node3': 2, '#nodes3': 2},
+            (4, 3): {'#balanced_node3': 0, '#nodes3': 2},
+            (4, 2): {'#balanced_node3': 1, '#nodes3': 2},
+            (4, 1): {'#balanced_node3': 1, '#nodes3': 2},
+            (2, 4): {'#balanced_node3': 2, '#nodes3': 2}}
+        computed = network_utils.compute_vanderijt_edge_balance(dg)
         self.assertDictEqual(computed, expected)
+
+    # @parameterized.expand(
+    #     [["no_isomorph_cycles", False], ["no_isomorph_cycles", True]])
+    # def test_compute_vanderijt_edge_balance_small_graph(
+    #         self, name, no_isomorph_cycles):
+    #     dg = nx.DiGraph()
+    #     dg.add_nodes_from([1, 2, 3])
+    #     dg.add_edge(1, 2, weight=1)
+    #     dg.add_edge(2, 1, weight=1)
+    #     dg.add_edge(2, 3, weight=-5)
+    #     dg.add_edge(3, 1, weight=-2)
+    #     if no_isomorph_cycles:
+    #         expected = {
+    #             (1, 2): {
+    #                 '#balanced': 1,
+    #                 '#cycle3': 1,
+    #                 'weight_distance': 9,
+    #                 'as_expected_sign': True}}
+    #     else:
+    #         expected = {
+    #             (1, 2): {
+    #                 '#balanced': 1,
+    #                 '#cycle3': 1,
+    #                 'weight_distance': 9,
+    #                 'as_expected_sign': True},
+    #             (3, 1): {
+    #                 '#balanced': 1,
+    #                 '#cycle3': 1,
+    #                 'weight_distance': 3,
+    #                 'as_expected_sign': True},
+    #             (2, 3): {
+    #                 '#balanced': 1,
+    #                 '#cycle3': 1,
+    #                 'weight_distance': 3,
+    #                 'as_expected_sign': True}}
+    #     computed = network_utils.compute_vanderijt_edge_balance(
+    #         dg, no_isomorph_cycles=no_isomorph_cycles)
+    #     self.assertDictEqual(computed, expected)
+
+    # @parameterized.expand(
+    #     [["no_isomorph_cycles", False],
+    #         ["no_isomorph_cycles", True]])
+    # def test_compute_vanderijt_edge_balance_allnegative_graph(
+    #         self, name, no_isomorph_cycles):
+    #     dg = nx.DiGraph()
+    #     dg.add_nodes_from([1, 2, 3, 4])
+    #     dg.add_edge(1, 2, weight=-1)
+    #     dg.add_edge(2, 3, weight=-1)
+    #     dg.add_edge(3, 1, weight=-1)
+    #     dg.add_edge(1, 4, weight=-5)
+    #     dg.add_edge(4, 3, weight=-2)
+    #     if no_isomorph_cycles:
+    #         expected = {
+    #             (1, 2): {
+    #                 '#balanced': 0,
+    #                 '#cycle3': 1,
+    #                 'weight_distance': 2,
+    #                 'as_expected_sign': False},
+    #             (1, 4): {
+    #                 '#balanced': 0,
+    #                 '#cycle3': 1,
+    #                 'weight_distance': 7,
+    #                 'as_expected_sign': False}}
+    #     else:
+    #         expected = {
+    #             (1, 2): {
+    #                 '#balanced': 0,
+    #                 '#cycle3': 1,
+    #                 'weight_distance': 2,
+    #                 'as_expected_sign': False},
+    #             (1, 4): {
+    #                 '#balanced': 0,
+    #                 '#cycle3': 1,
+    #                 'weight_distance': 7,
+    #                 'as_expected_sign': False},
+    #             (2, 3): {
+    #                 '#balanced': 0,
+    #                 '#cycle3': 1,
+    #                 'weight_distance': 2,
+    #                 'as_expected_sign': False},
+    #             (3, 1): {
+    #                 '#balanced': 0,
+    #                 '#cycle3': 2,
+    #                 'weight_distance': 13,
+    #                 'as_expected_sign': False},
+    #             (4, 3): {
+    #                 '#balanced': 0,
+    #                 '#cycle3': 1,
+    #                 'weight_distance': 7,
+    #                 'as_expected_sign': False}}
+
+    #     computed = network_utils.compute_vanderijt_edge_balance(
+    #         dg, no_isomorph_cycles=no_isomorph_cycles)
+    #     self.assertDictEqual(computed, expected)
 
     # =========================================================================
     # ====================== compute_fairness_goodness ========================

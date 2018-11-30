@@ -251,13 +251,12 @@ def get_metrics_for_network(
     metrics['gcc diameter'] = nx.diameter(GCC)
 
     # My balance metrics.
-    edge_balance = compute_edge_balance(
-        dgraph, no_isomorph_cycles=True)
+    edge_balance = compute_vanderijt_edge_balance(dgraph)
     balanced_cycles = 0
     cycles = 0
     for value in edge_balance.values():
-        balanced_cycles += value['#balanced']
-        cycles += value['#cycle3']
+        balanced_cycles += value['#balanced_node3']
+        cycles += value['#nodes3']
     balanced_ratio = None
     if cycles:
         balanced_ratio = balanced_cycles / cycles
@@ -326,21 +325,12 @@ def count_different_signed_edges(dgraph):
 
 
 # @enforce.runtime_validation
-def compute_edge_balance(
-        dgraph: nx.DiGraph,
-        no_isomorph_cycles: bool = False) -> Dict[tuple, Dict[str, int]]:
+def compute_vanderijt_edge_balance(
+        dgraph: nx.DiGraph) -> Dict[tuple, Dict[str, int]]:
     """Computes edge balance based on Van De Rijt (2011).
-
-    With no_isomorph_cycles=True, we can get the number of cycles and edge
-        is not meaningful. However, with no_isomorph_cycles=False, for every
-        edge which is involved one of cycle3, there will be information in
-        the dictionary.
 
     Args:
         dgraph: Directed weighted graph to apply edge balance.
-
-        no_isomorph_cycles: If true, it does not count
-            the isomorph cycle3.
 
     Returns:
         Dictionary of edges mapped to the number of balanced
@@ -357,18 +347,18 @@ def compute_edge_balance(
         nodes = list(set(dgraph.nodes()) - set(edge))
         xij = dgraph.get_edge_data(edge[0], edge[1])['weight']
         for node in nodes:
-            if dgraph.has_edge(edge[0], node) and dgraph.has_edge(node, edge[1]):
+            if (dgraph.has_edge(edge[0], node)
+                    and dgraph.has_edge(node, edge[1])):
                 xik = dgraph.get_edge_data(edge[0], node)['weight']
                 xkj = dgraph.get_edge_data(node, edge[1])['weight']
-
                 nodes3 += 1
                 if np.sign(xij * xik * xkj) > 0:
                     balanced_node3 += 1
 
         if nodes3:
             edge_sign[edge] = {
-                'balanced_node3': balanced_node3,
-                'nodes3': nodes3}
+                '#balanced_node3': balanced_node3,
+                '#nodes3': nodes3}
     return edge_sign
 
     # edge_balance = {}
