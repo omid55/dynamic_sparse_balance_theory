@@ -940,12 +940,18 @@ class MyTestClass(unittest.TestCase):
     # =========================================================================
     # ================== generate_converted_graphs ============================
     # =========================================================================
+    def test_generate_converted_graphs_raises_when_wrong_percentage(self):
+        with self.assertRaises(ValueError):
+            network_utils.generate_converted_graphs(
+                dgraph=nx.DiGraph(),
+                percentage=-1)
+
     def test_generate_converted_graphs_when_it_adds_edges(self):
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3, 4])
         dg.add_edge(1, 2, weight=1)
-        dg.add_edge(1, 3, weight=1)
-        dg.add_edge(2, 3, weight=1)
+        dg.add_edge(1, 3, weight=2)
+        dg.add_edge(2, 3, weight=5)
         dg.add_edge(3, 1, weight=1)
         percentage = 25
         computed_graphs = network_utils.generate_converted_graphs(
@@ -953,7 +959,7 @@ class MyTestClass(unittest.TestCase):
             convert_from=0,
             convert_to=1,
             percentage=percentage,
-            how_many_to_generate=2)
+            how_many_to_generate=5)
         for computed in computed_graphs:
             # It should contain all nodes.
             self.assertEqual(dg.nodes(), computed.nodes())
@@ -1014,7 +1020,26 @@ class MyTestClass(unittest.TestCase):
             self.assertEqual(dg.nodes(), computed.nodes())
             # It should contain percentage extra edges.
             self.assertEqual(
-                len(computed.edges()), int(4*3*percentage/100))
+                len(computed.edges()), int(4 * 3 * percentage / 100))
+
+    def test_generate_converted_graphs_for_large_networks(self):
+        n = 100
+        m = 300
+        dgraph = nx.gnm_random_graph(n=n, m=m, directed=True)
+        percentage = 5
+        computed_graphs = network_utils.generate_converted_graphs(
+            dgraph=dgraph,
+            convert_from=0,
+            convert_to=1,
+            percentage=percentage,
+            how_many_to_generate=6)
+        for computed in computed_graphs:
+            # It should contain all nodes.
+            self.assertEqual(dgraph.nodes(), computed.nodes())
+            # It should contain percentage extra edges.
+            self.assertEqual(
+                len(computed.edges()), m + int(
+                    (n * (n-1) - m) * percentage / 100))
 
 
 if __name__ == '__main__':

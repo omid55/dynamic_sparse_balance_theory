@@ -693,10 +693,38 @@ def generate_all_possible_sparse_triads(
     return triad_map, triad_list
 
 
+def generate_all_possible_triads() -> Tuple[Dict[str, int], List[np.ndarray]]:
+    """Generates all possible triads."""
+    triad_list = [
+        np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]),  # Triad label 300
+        np.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]]),  # Triad label 102
+        np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]]),  # Triad label 003
+        np.array([[0, 0, 1], [1, 0, 1], [1, 0, 0]]),  # Triad label 120D
+        np.array([[0, 1, 1], [0, 0, 0], [1, 1, 0]]),  # Triad label 120U
+        np.array([[0, 1, 1], [0, 0, 1], [0, 0, 0]]),  # Triad label 030T
+        np.array([[0, 0, 0], [1, 0, 1], [0, 0, 0]]),  # Triad label 021D
+        np.array([[0, 1, 0], [0, 0, 0], [0, 1, 0]]),  # Triad label 021U
+        np.array([[0, 1, 0], [0, 0, 0], [0, 0, 0]]),  # Triad label 012
+        np.array([[0, 1, 0], [0, 0, 1], [0, 0, 0]]),  # Triad label 021C
+        np.array([[0, 1, 0], [1, 0, 1], [0, 0, 0]]),  # Triad label 111U
+        np.array([[0, 1, 0], [1, 0, 0], [0, 1, 0]]),  # Triad label 111D
+        np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]]),  # Triad label 030C
+        np.array([[0, 1, 1], [1, 0, 0], [1, 0, 0]]),  # Triad label 201
+        np.array([[0, 1, 0], [1, 0, 1], [1, 0, 0]]),  # Triad label 120C
+        np.array([[0, 1, 0], [1, 0, 1], [1, 1, 0]])]  # Triad label 210
+    triad_map = {}
+    for triad_index, triad in enumerate(triad_list):
+        if str(triad) not in triad_map:
+            for permutation in _get_all_triad_permutations(triad):
+                triad_map[str(permutation)] = triad_index
+    return triad_map, triad_list
+
+
 # @enforce.runtime_validation
 def _detect_triad_type_for_all_subgraph3(
         dgraph: nx.DiGraph,
         triad_map: Dict[str, int] = None,
+        sparse_triads: bool = True,
         verbose: bool = False) -> Dict[str, int]:
     """Detects triad type for all possible subgraphs of size 3 in given graph.
 
@@ -704,6 +732,8 @@ def _detect_triad_type_for_all_subgraph3(
         dgraph: The directed graph.
 
         triad_map: Initialized sparse triad map (string to triad type index).
+
+        sparse_triads: Whether want to generate sparse triads if not triad_map.
 
         verbose: Whether we want it to print '.' as the finished indicator.
 
@@ -714,7 +744,10 @@ def _detect_triad_type_for_all_subgraph3(
         None.
     """
     if not triad_map:
-        triad_map, _ = generate_all_possible_sparse_triads()
+        if sparse_triads:
+            triad_map, _ = generate_all_possible_sparse_triads()
+        else:
+            triad_map, _ = generate_all_possible_triads()
     subgraph2triad_type = {}
     nodes_list = np.array(dgraph.nodes())
     adj_matrix = utils.dgraph2adjacency(dgraph)
@@ -745,6 +778,7 @@ def compute_transition_matrix(
         dgraphs: List[nx.DiGraph],
         unique_triad_num: int,
         triad_map: Dict[str, int] = None,
+        sparse_triads: bool = True,
         verbose: bool = False) -> Dict[
                                     str, Union[List[np.ndarray], List[Dict]]]:
     """Computes transition matrix and triads count for every consequetive graph.
@@ -755,6 +789,8 @@ def compute_transition_matrix(
         unique_triad_num: Number of unique sparse triads.
 
         triad_map: Initialized sparse triad map (string to triad type index).
+
+        sparse_triads: Whether want to generate sparse triads if not triad_map.
 
         verbose: If we want to print a . as progress while computing.
 
@@ -770,12 +806,18 @@ def compute_transition_matrix(
             'We need at least 2 directed graphs for computing transition.')
 
     if not triad_map:
-        triad_map, triad_list = generate_all_possible_sparse_triads()
+        if sparse_triads:
+            triad_map, triad_list = generate_all_possible_sparse_triads()
+        else:
+            triad_map, triad_list = generate_all_possible_triads()
         unique_triad_num = len(triad_list)
 
     # Detects the sparse triad types of all networks.
     triads_types = [_detect_triad_type_for_all_subgraph3(
-            dgraph=dgraph, triad_map=triad_map, verbose=verbose)
+            dgraph=dgraph,
+            triad_map=triad_map,
+            sparse_triads=sparse_triads,
+            verbose=verbose)
             for dgraph in dgraphs]
 
     transition_matrices = []
@@ -999,7 +1041,8 @@ def compute_randomized_transition_matrix(
         unique_triad_num: int,
         triad_map: Dict[str, int] = None,
         switching_count_coef: int = 300,
-        randomized_num: int = 100) -> List[np.ndarray]:
+        randomized_num: int = 100,
+        sparse_triads: bool = True) -> List[np.ndarray]:
     """Computes the transition of many randomized versions of two networks.
 
     Args:
@@ -1015,6 +1058,8 @@ def compute_randomized_transition_matrix(
 
         randomized_num: Number of transition matrices to generate.
 
+        sparse_triads: Whether want to generate sparse triads if not triad_map.
+
     Returns:
         List of transition matrices from subsequent randomized networks.
 
@@ -1022,7 +1067,10 @@ def compute_randomized_transition_matrix(
         None.
     """
     if not triad_map:
-        triad_map, triad_list = generate_all_possible_sparse_triads()
+        if sparse_triads:
+            triad_map, triad_list = generate_all_possible_sparse_triads()
+        else:
+            triad_map, triad_list = generate_all_possible_triads()
         unique_triad_num = len(triad_list)
     rand_transition_matrices = []
     for _ in range(randomized_num):
@@ -1167,8 +1215,8 @@ def generate_converted_graphs(
             adj_matrix[from_edges[0][index], from_edges[1][index]] = convert_to
         # This is a social network and should not contain any self-loop.
         np.fill_diagonal(adj_matrix, 0)
-        generated_dgraphs.append(
-            utils.adjacency2digraph(
-                adj_matrix=adj_matrix,
-                similar_this_dgraph=dgraph))
+        generated_dgraph = utils.adjacency2digraph(
+            adj_matrix=adj_matrix,
+            similar_this_dgraph=dgraph)
+        generated_dgraphs.append(generated_dgraph)
     return generated_dgraphs
