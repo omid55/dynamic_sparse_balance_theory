@@ -145,14 +145,14 @@ class MyTestClass(unittest.TestCase):
         np.testing.assert_array_almost_equal(expected, computed, decimal=2)
 
     # =========================================================================
-    # ======================= fully_savefig ===================================
-    # ======================= fully_loadfig ===================================
+    # ======================= save_figure =====================================
+    # ======================= load_figure =====================================
     # =========================================================================
-    def test_fully_save_and_load_fig(self):
+    def test_save_and_load_figure(self):
         fig_object = plt.figure()
         file_path = 'test_file'
-        utils.fully_savefig(fig_object=fig_object, file_path=file_path)
-        loaded_fig_object = utils.fully_loadfig(file_path=file_path)
+        utils.save_figure(fig_object=fig_object, file_path=file_path)
+        loaded_fig_object = utils.load_figure(file_path=file_path)
         os.remove(file_path+'.pkl')
         os.remove(file_path+'.pdf')
         self.assertEqual(fig_object.images, loaded_fig_object.images)
@@ -262,6 +262,17 @@ class MyTestClass(unittest.TestCase):
             self.assertEqual(
                 dg.get_edge_data(edge[0], edge[1]),
                 computed_graph.get_edge_data(edge[0], edge[1]))
+
+    # =========================================================================
+    # ==================== save_it and load_it ================================
+    # =========================================================================
+    def test_load_it_and_save_it(self):
+        a = [1, 2, 6, 10]
+        file_path = 'tmp.pk'
+        utils.save_it(a, file_path)
+        b = utils.load_it(file_path)
+        os.remove(file_path)
+        self.assertEqual(a, b)
 
 
 if __name__ == '__main__':

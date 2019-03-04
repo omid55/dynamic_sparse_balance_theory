@@ -162,7 +162,7 @@ def make_matrix_row_stochastic(matrix: np.ndarray) -> np.ndarray:
 
 
 # @enforce.runtime_validation
-def fully_savefig(
+def save_figure(
         fig_object: matplotlib.figure.Figure,
         file_path: str) -> None:
     """Fully saves the figure in pdf and pkl format for later modification.
@@ -185,14 +185,14 @@ def fully_savefig(
         None.
     """
     # Saves as pdf.
-    plt.savefig(file_path + '.pdf', dpi=fig_object.dpi)
+    fig_object.savefig(file_path + '.pdf', dpi=fig_object.dpi)
     # Also saves as pickle.
     with open(file_path + '.pkl', 'wb') as handle:
         pk.dump(fig_object, handle, protocol=pk.HIGHEST_PROTOCOL)
 
 
 # @enforce.runtime_validation
-def fully_loadfig(file_path: str) -> matplotlib.figure.Figure:
+def load_figure(file_path: str) -> matplotlib.figure.Figure:
     """Fully loads the saved figure to be able to be modified.
 
     It can be easily showed by:
@@ -391,3 +391,47 @@ def _adjacency2digraph_with_given_mapping(
     if node_mapping:
         return nx.relabel_nodes(new_dgrpah, mapping=node_mapping)
     return new_dgrpah
+
+
+# @enforce.runtime_validation
+def save_it(obj: object, file_path: str, verbose: bool = False) -> None:
+    """Saves the input object in the given file path.
+
+    Args:
+        file_path: String file path (with extension).
+
+        verbose: Whether to print information about saving successfully or not.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+    """
+    with open(file_path, 'wb') as handle:
+        pk.dump(obj, handle, protocol=pk.HIGHEST_PROTOCOL)
+    if verbose:
+        print('{} is successfully saved.'.format(file_path))
+
+
+# @enforce.runtime_validation
+def load_it(file_path: str, verbose: bool = False) -> object:
+    """Loads from the given file path a saved object.
+
+    Args:
+        file_path: String file path (with extension).
+
+        verbose: Whether to print info about loading successfully or not.
+
+    Returns:
+        The loaded object.
+
+    Raises:
+        None.
+    """
+    obj = None
+    with open(file_path, 'rb') as handle:
+        obj = pk.load(handle)
+    if verbose:
+        print('{} is successfully loaded.'.format(file_path))
+    return obj

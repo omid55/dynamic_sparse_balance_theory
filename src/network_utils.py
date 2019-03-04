@@ -31,7 +31,7 @@ import utils
 # @enforce.runtime_validation
 def extract_graph(
         selected_edge_list: pd.DataFrame,
-        sum_multiple_edge: bool = False) -> nx.DiGraph:
+        sum_multiple_edge: bool = True) -> nx.DiGraph:
     """Extracts a list of graphs in each period of time.
 
     If there were multiple edges between two nodes, then if sum_multiple_edge
@@ -72,7 +72,7 @@ def extract_graphs(
         edge_list: pd.DataFrame,
         weeks: int = 4,
         accumulative: bool = False,
-        sum_multiple_edge: bool = False) -> List[nx.DiGraph]:
+        sum_multiple_edge: bool = True) -> List[nx.DiGraph]:
     """Extracts a list of graphs in each period of time.
 
     It extracts graph structure for periods with the duration of given number
@@ -115,9 +115,36 @@ def extract_graphs(
             # Chooses the edges until this period (accumulative).
             selected_edges = edge_list[edge_list['edge_date'] < period_end]
         dgraph = extract_graph(
-            selected_edges, sum_multiple_edge=sum_multiple_edge)
+            selected_edge_list=selected_edges,
+            sum_multiple_edge=sum_multiple_edge)
         dgraphs.append(dgraph)
     return dgraphs
+
+
+# @enforce.runtime_validation
+def get_all_degrees(graph: nx.DiGraph) -> Dict[str, Dict[str, int]]:
+    """Gets self-, in- and out-degree of a given graph.
+
+    Args:
+        graph: Given directed graph.
+
+    Returns:
+        Dict. of every node mapped to a dictionary of self, in and out degree.
+
+    Raises:
+        None.
+    """
+    degrees = {}
+    adjacency_matrix = nx.adj_matrix(graph).todense()
+    for i, node in enumerate(graph.nodes()):
+        self_degree = adjacency_matrix[i, i]
+        out_edges = adjacency_matrix[i, :]
+        in_edges = adjacency_matrix[:, i]
+        out_degree = np.sum(out_edges) - self_degree
+        in_degree = np.sum(in_edges) - self_degree
+        degrees[node] = (
+            {'self': self_degree, 'in': in_degree, 'out': out_degree})
+    return degrees
 
 
 # @enforce.runtime_validation
@@ -308,7 +335,7 @@ def cartwright_harary_balance(dgraph: nx.DiGraph) -> float:
 
 
 # @enforce.runtime_validation
-def count_different_signed_edges(dgraph):
+def count_different_signed_edges(dgraph: nx.DiGraph) -> int:
     different_signs = 0
     nodes = list(dgraph.nodes())
     for i in range(len(nodes)-1):
@@ -526,14 +553,27 @@ def compute_fairness_goodness(
 
 
 # @enforce.runtime_validation
-def is_sparsely_transitive_balanced(triad: np.ndarray) -> bool:
+def is_sparsely_transitive_balanced(
+        triad: np.ndarray,
+        everyone_aware_of_others: bool=True) -> bool:
     """Checks whether input triad matrix is transitively balanced or not.
 
     Transitive balance is defined on only one rule:
         Friend of friend is friend.
+    For every path from i to j, if there is x_{ij} or x_{ji}
+    (at least one is available), then this means they know each other and
+    there should be a tension.
+    When everyone_aware_of_others is True, this means having null sometimes is
+    not accepted. For instance, when a is friend with b and b is friend with c,
+    a should be friend with c too since a and c are aware of each other. In
+    this case, sparsity helps when the conditions to none of 4 axioms are
+    valid. If everyone_aware_of_others is False, then we enforce balance rules
+    when there is an edge for every ij (which means if abs(ij)).
 
     Args:
         triad: Input triad matrix.
+
+        everyone_aware_of_others: Is everyone aware of others or not.
 
     Returns:
         Boolean result whether triad is transitively balanced or not.
@@ -549,38 +589,19 @@ def is_sparsely_transitive_balanced(triad: np.ndarray) -> bool:
         if triad[i, i]:
             raise ValueError('There is a self loop in given triad: {}.'.format(
                 triad))
-
-    for i in range(3):
-        a = i
-        b = (i + 1) % 3
-        c = (i + 2) % 3
-
-        # # For every edge between a and b.
-        # if triad[a, b] * triad[b, a] < 0:
-        #     return False
-        # # For every path from a to c.
-        # if ((abs(triad[a, b]) and abs(triad[b, c]))
-        #         and (triad[a, b]*triad[b, c]*triad[a, c] <= 0)):
-        #     return False
-        # # For every path from c to a.
-        # if ((abs(triad[c, b]) and abs(triad[b, a]))
-        #         and (triad[c, b]*triad[b, a]*triad[c, a] <= 0)):
-        #     return False
-
-        # For every path from a to c.
-        if ((triad[a, b] > 0) and (triad[b, c] > 0)
-                and (triad[a, b]*triad[b, c]*triad[a, c] <= 0)):
-            return False
-        # For every path from c to a.
-        if ((triad[c, b] > 0) and (triad[b, a] > 0)
-                and (triad[c, b]*triad[b, a]*triad[c, a] <= 0)):
-            return False
-
+    for (i, j, k) in list(itertools.permutations([0, 1, 2])):
+        if everyone_aware_of_others or abs(triad[i, j]):
+            if ((abs(triad[i, k]) and abs(triad[k, j]))
+                and (triad[i, k] > 0 and triad[k, j] > 0)
+                    and (triad[i, j] != triad[i, k]*triad[k, j])):
+                return False
     return True
 
 
 # @enforce.runtime_validation
-def is_sparsely_cartwright_harary_balanced(triad: np.ndarray) -> bool:
+def is_sparsely_cartwright_harary_balanced(
+        triad: np.ndarray,
+        everyone_aware_of_others: bool=True) -> bool:
     """Checks whether input triad matrix is balanced or not w.r.t. C & H.
 
     Cartwright and Harary balance is defined on multiplication of every 3 edge
@@ -592,6 +613,8 @@ def is_sparsely_cartwright_harary_balanced(triad: np.ndarray) -> bool:
 
     Args:
         triad: Input triad matrix.
+
+        everyone_aware_of_others: Is everyone aware of others or not.
 
     Returns:
         Boolean result whether triad is transitively balanced or not.
@@ -607,21 +630,85 @@ def is_sparsely_cartwright_harary_balanced(triad: np.ndarray) -> bool:
         if triad[i, i]:
             raise ValueError('There is a self loop in given triad: {}.'.format(
                 triad))
-    for i in range(3):
-        a = i
-        b = (i + 1) % 3
-        c = (i + 2) % 3
-
-        # For every path from a to c.
-        if ((abs(triad[a, b]) and abs(triad[b, c]))
-                and (triad[a, b]*triad[b, c]*triad[a, c] <= 0)):
-            return False
-        # For every path from c to a.
-        if ((abs(triad[c, b]) and abs(triad[b, a]))
-                and (triad[c, b]*triad[b, a]*triad[c, a] <= 0)):
-            return False
-
+    for (i, j, k) in list(itertools.permutations([0, 1, 2])):
+        if everyone_aware_of_others or abs(triad[i, j]):
+            if (abs(triad[i, k]) and abs(triad[k, j])
+                    and (triad[i, j] != triad[i, k]*triad[k, j])):
+                return False
     return True
+
+
+# @enforce.runtime_validation
+def is_sparsely_clustering_balanced(
+        triad: np.ndarray,
+        everyone_aware_of_others: bool=True) -> bool:
+    """Checks whether input triad matrix is clustering balance (Davis 1967).
+
+    x_{ij} sim x_{ik}x_{kj}, \text{for} k \neq i, j\\
+        \text{and} (x_{ik} > 0 \text{or} x_{kj} > 0)
+
+    Args:
+        triad: Input triad matrix.
+
+        everyone_aware_of_others: Is everyone aware of others or not.
+
+    Returns:
+        Boolean result whether triad is clustering balanced or not.
+
+    Raises:
+        ValueError: If there is a self loop in the given triad or triad was not
+        3 * 3.
+    """
+    n, m = triad.shape
+    if n != 3 or m != 3:
+        raise ValueError('Triad has unexpected shape.')
+    for i in range(n):
+        if triad[i, i]:
+            raise ValueError('There is a self loop in given triad: {}.'.format(
+                triad))
+    for (i, j, k) in list(itertools.permutations([0, 1, 2])):
+        if everyone_aware_of_others or abs(triad[i, j]):
+            if ((abs(triad[i, k]) and abs(triad[k, j]))
+                and (triad[i, k] > 0 or triad[k, j] > 0)
+                    and (triad[i, j] != triad[i, k]*triad[k, j])):
+                return False
+    return True
+
+
+# # @enforce.runtime_validation
+# def is_sparsely_ranked_clustering_balanced(triad: np.ndarray) -> bool:
+#     """Checks whether input triad matrix is ranked clustering balance.
+
+#     x_{ij} sim x_{ik}x_{kj}, \text{for} k \neq i, j\\
+#         \text{and} x_{ik} > 0
+
+#     Args:
+#         triad: Input triad matrix.
+
+#     Returns:
+#         Boolean result whether triad is clustering balanced or not.
+
+#     Raises:
+#         ValueError: If there is a self loop in the given triad or triad was
+#         not
+#         3 * 3.
+#     """
+#     n, m = triad.shape
+#     if n != 3 or m != 3:
+#         raise ValueError('Triad has unexpected shape.')
+#     for i in range(n):
+#         if triad[i, i]:
+#             raise ValueError('There is a self loop in given triad: {}.'
+# .format(
+#                 triad))
+# for (i, j, k) in list(itertools.permutations([0, 1, 2])):
+#         if abs(triad[i, j]) or abs(triad[j, i]):
+#             # If they exist.
+#             if ((abs(triad[i, k]) and abs(triad[k, j]))
+#                 and (triad[i, k] > 0)
+#                     and (triad[i, j] != triad[i, k]*triad[k, j])):
+#                 return False
+#     return True
 
 
 # @enforce.runtime_validation
@@ -660,7 +747,7 @@ def _get_all_triad_permutations(triad_matrix: np.ndarray) -> Set[str]:
 # @enforce.runtime_validation
 def generate_all_possible_sparse_triads(
         ) -> Tuple[Dict[str, int], List[np.ndarray]]:
-    """Generates all possible sparse triads.
+    """Generates all possible triads in sparse balance theory.
 
     Args:
         None.
@@ -694,7 +781,17 @@ def generate_all_possible_sparse_triads(
 
 
 def generate_all_possible_triads() -> Tuple[Dict[str, int], List[np.ndarray]]:
-    """Generates all possible triads."""
+    """Generates all possible triads in classical balance theory.
+
+    Args:
+        None.
+
+    Returns:
+        Dictionary of intiallized all triad types and their adjancecy matrices.
+
+    Raises:
+        None.
+    """
     triad_list = [
         np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]),  # Triad label 300
         np.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]]),  # Triad label 102
@@ -901,7 +998,7 @@ def get_stationary_distribution(
             aperiodic_irreducible_eps=aperiodic_irreducible_eps))
     index = np.where(eigen_values > 0.99)[0][0]
     stationary_distribution = [item.real for item in eigen_vectors[:, index]]
-    stationary_distribution /= sum(stationary_distribution)
+    stationary_distribution /= np.sum(stationary_distribution)
     return stationary_distribution
 
 

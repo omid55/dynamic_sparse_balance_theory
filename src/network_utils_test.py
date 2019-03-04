@@ -124,6 +124,29 @@ class MyTestClass(unittest.TestCase):
                     weight_column_name='weight'))
 
     # =========================================================================
+    # ====================== get_all_degrees ==================================
+    # =========================================================================
+    def test_get_all_degrees(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4, 5])
+        dg.add_edge(1, 1, weight=6)
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(1, 4, weight=-5)
+        dg.add_edge(2, 2, weight=-1)
+        dg.add_edge(2, 3, weight=1)
+        dg.add_edge(3, 1, weight=-4)
+        dg.add_edge(3, 2, weight=4)
+        dg.add_edge(4, 4, weight=-10)
+        computed = network_utils.get_all_degrees(dg)
+        expected = (
+            {1: {'self': 6, 'out': -4, 'in': -4},
+             2: {'self': -1, 'out': 1, 'in': 5},
+             3: {'self': 0, 'out': 0, 'in': 1},
+             4: {'self': -10, 'out': 0, 'in': -5},
+             5: {'self': 0, 'out': 0, 'in': 0}})
+        self.assertDictEqual(computed, expected)
+
+    # =========================================================================
     # ===================== get_just_periods ==================================
     # =========================================================================
     def test_get_just_periods(self):
@@ -418,6 +441,14 @@ class MyTestClass(unittest.TestCase):
             network_utils.is_sparsely_transitive_balanced(triad_with_self_loop)
 
     @parameterized.expand([
+        ["120U", np.array(
+            [[0, 1, 1],
+             [1, 0, 1],
+             [-1, -1, 0]]), True],
+        ["120D", np.array(
+            [[0, 1, -1],
+             [1, 0, -1],
+             [1, 1, 0]]), True],
         ["0122Z", np.array(
             [[0, 0, -1],
              [-1, 0, 0],
@@ -454,7 +485,7 @@ class MyTestClass(unittest.TestCase):
             [[0, 0, 0],
              [1, 0, 1],
              [0, 0, 0]]), True],
-        ["210Z", np.array(
+        ["210", np.array(
             [[0, 1, -1],
              [1, 0, 1],
              [1, 1, 0]]), False],
@@ -507,6 +538,14 @@ class MyTestClass(unittest.TestCase):
                 triad_with_self_loop)
 
     @parameterized.expand([
+        ["120U", np.array(
+            [[0, 1, 1],
+             [1, 0, 1],
+             [-1, -1, 0]]), False],
+        ["120D", np.array(
+            [[0, 1, -1],
+             [1, 0, -1],
+             [1, 1, 0]]), False],
         ["0122Z", np.array(
             [[0, 0, -1],
              [-1, 0, 0],
@@ -543,7 +582,7 @@ class MyTestClass(unittest.TestCase):
             [[0, 0, 0],
              [1, 0, 1],
              [0, 0, 0]]), True],
-        ["210Z", np.array(
+        ["210", np.array(
             [[0, 1, -1],
              [1, 0, 1],
              [1, 1, 0]]), False],
@@ -581,6 +620,199 @@ class MyTestClass(unittest.TestCase):
         self.assertEqual(
             network_utils.is_sparsely_cartwright_harary_balanced(triad),
             expected_balance)
+
+    # =========================================================================
+    # ====================== is_sparsely_clustering_balanced ==================
+    # =========================================================================
+    def test_is_sparsely_clustering_balanced_raises_when_self_loops(self):
+        with self.assertRaises(ValueError):
+            triad_with_self_loop = np.array(
+                [[0, 1, 0],
+                 [0, 1, 1],
+                 [0, 0, 0]])
+            network_utils.is_sparsely_clustering_balanced(
+                triad_with_self_loop)
+
+    @parameterized.expand([
+        ["120U", np.array(
+            [[0, 1, 1],
+             [1, 0, 1],
+             [-1, -1, 0]]), False],
+        ["120D", np.array(
+            [[0, 1, -1],
+             [1, 0, -1],
+             [1, 1, 0]]), False],
+        ["0122Z", np.array(
+            [[0, 0, -1],
+             [-1, 0, 0],
+             [1, -1, 0]]), True],
+        ["030TZ", np.array(
+            [[0, 1, 1],
+             [0, 0, 1],
+             [0, 0, 0]]), True],
+        ["003", np.array(
+            [[0, -1, -1],
+             [-1, 0, -1],
+             [-1, -1, 0]]), True],
+        ["0032Z", np.array(
+            [[0, 0, -1],
+             [-1, 0, 0],
+             [-1, -1, 0]]), True],
+        ["030T", np.array(
+            [[0, 1, 1],
+             [-1, 0, 1],
+             [-1, -1, 0]]), False],
+        ["021C", np.array(
+            [[0, 1, -1],
+             [-1, 0, 1],
+             [-1, -1, 0]]), False],
+        ["030T2negZ", np.array(
+            [[0, 1, -1],
+             [0, 0, -1],
+             [0, 0, 0]]), True],
+        ["021UnegZ", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, -1, 0]]), True],
+        ["021DZ", np.array(
+            [[0, 0, 0],
+             [1, 0, 1],
+             [0, 0, 0]]), True],
+        ["210", np.array(
+            [[0, 1, -1],
+             [1, 0, 1],
+             [1, 1, 0]]), False],
+        ["210Z", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [1, 1, 0]]), False],
+        ["003Z", np.array(
+            [[0, 0, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), True],
+        ["102Z", np.array(
+            [[0, 1, 0],
+             [1, 0, 0],
+             [0, 0, 0]]), True],
+        ["102negZ", np.array(
+            [[0, -1, 0],
+             [-1, 0, 0],
+             [0, 0, 0]]), True],
+        ["102posnegZ", np.array(
+            [[0, 1, 0],
+             [-1, 0, 0],
+             [0, 0, 0]]), True],
+        ["012Z", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), True],
+        ["012", np.array(
+            [[0, 1, -1],
+             [-1, 0, -1],
+             [-1, -1, 0]]), True]]
+        )
+    def test_is_sparsely_clustering_balanced(
+            self, name, triad, expected_balance):
+        self.assertEqual(
+            network_utils.is_sparsely_clustering_balanced(triad),
+            expected_balance)
+
+    # # =========================================================================
+    # # ===================== is_sparsely_ranked_clustering_balanced ============
+    # # =========================================================================
+    # def test_is_sparsely_ranked_clustering_balanced_raises_when_self_loops(
+    #         self):
+    #     with self.assertRaises(ValueError):
+    #         triad_with_self_loop = np.array(
+    #             [[0, 1, 0],
+    #              [0, 1, 1],
+    #              [0, 0, 0]])
+    #         network_utils.is_sparsely_ranked_clustering_balanced(
+    #             triad_with_self_loop)
+
+    # @parameterized.expand([
+    #     ["120U", np.array(
+    #         [[0, 1, 1],
+    #          [1, 0, 1],
+    #          [-1, -1, 0]]), True],
+    #     ["120D", np.array(
+    #         [[0, 1, -1],
+    #          [1, 0, -1],
+    #          [1, 1, 0]]), True],
+    #     ["0122Z", np.array(
+    #         [[0, 0, -1],
+    #          [-1, 0, 0],
+    #          [1, -1, 0]]), True],
+    #     ["030TZ", np.array(
+    #         [[0, 1, 1],
+    #          [0, 0, 1],
+    #          [0, 0, 0]]), True],
+    #     ["003", np.array(
+    #         [[0, -1, -1],
+    #          [-1, 0, -1],
+    #          [-1, -1, 0]]), True],
+    #     ["0032Z", np.array(
+    #         [[0, 0, -1],
+    #          [-1, 0, 0],
+    #          [-1, -1, 0]]), True],
+    #     ["030T", np.array(
+    #         [[0, 1, 1],
+    #          [-1, 0, 1],
+    #          [-1, -1, 0]]), False],
+    #     ["021C", np.array(
+    #         [[0, 1, -1],
+    #          [-1, 0, 1],
+    #          [-1, -1, 0]]), False],
+    #     ["030T2negZ", np.array(
+    #         [[0, 1, -1],
+    #          [0, 0, -1],
+    #          [0, 0, 0]]), True],
+    #     ["021UnegZ", np.array(
+    #         [[0, 1, 0],
+    #          [0, 0, 0],
+    #          [0, -1, 0]]), True],
+    #     ["021DZ", np.array(
+    #         [[0, 0, 0],
+    #          [1, 0, 1],
+    #          [0, 0, 0]]), True],
+    #     ["210", np.array(
+    #         [[0, 1, -1],
+    #          [1, 0, 1],
+    #          [1, 1, 0]]), False],
+    #     ["210Z", np.array(
+    #         [[0, 1, 0],
+    #          [1, 0, 1],
+    #          [1, 1, 0]]), False],
+    #     ["003Z", np.array(
+    #         [[0, 0, 0],
+    #          [0, 0, 0],
+    #          [0, 0, 0]]), True],
+    #     ["102Z", np.array(
+    #         [[0, 1, 0],
+    #          [1, 0, 0],
+    #          [0, 0, 0]]), True],
+    #     ["102negZ", np.array(
+    #         [[0, -1, 0],
+    #          [-1, 0, 0],
+    #          [0, 0, 0]]), True],
+    #     ["102posnegZ", np.array(
+    #         [[0, 1, 0],
+    #          [-1, 0, 0],
+    #          [0, 0, 0]]), True],
+    #     ["012Z", np.array(
+    #         [[0, 1, 0],
+    #          [0, 0, 0],
+    #          [0, 0, 0]]), True],
+    #     ["012", np.array(
+    #         [[0, 1, -1],
+    #          [-1, 0, -1],
+    #          [-1, -1, 0]]), True]]
+    #     )
+    # def test_is_sparsely_ranked_clustering_balanced(
+    #         self, name, triad, expected_balance):
+    #     self.assertEqual(
+    #         network_utils.is_sparsely_ranked_clustering_balanced(triad),
+    #         expected_balance)
 
     # =========================================================================
     # ====================== get_all_triad_permutations =======================
