@@ -210,29 +210,29 @@ class MyTestClass(unittest.TestCase):
             self.assertAlmostEqual(value, computed[key], places=3)
 
     # =========================================================================
-    # ====================== cartwright_harary_balance ========================
+    # ====================== cartwright_harary_balance_ratio ==================
     # =========================================================================
-    def test_cartwright_harary_balance(self):
+    def test_cartwright_harary_balance_ratio(self):
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3])
         dg.add_edge(1, 2, weight=1)
         dg.add_edge(2, 3, weight=1)
         dg.add_edge(3, 1, weight=-1)
-        self.assertEqual(network_utils.cartwright_harary_balance(dg), 0)
+        self.assertEqual(network_utils.cartwright_harary_balance_ratio(dg), 0)
 
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3])
         dg.add_edge(1, 2, weight=-1)
         dg.add_edge(2, 3, weight=-1)
         dg.add_edge(3, 1, weight=-1)
-        self.assertEqual(network_utils.cartwright_harary_balance(dg), 0)
+        self.assertEqual(network_utils.cartwright_harary_balance_ratio(dg), 0)
 
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3])
         dg.add_edge(1, 2, weight=1)
         dg.add_edge(2, 3, weight=-1)
         dg.add_edge(3, 1, weight=-1)
-        self.assertEqual(network_utils.cartwright_harary_balance(dg), 1)
+        self.assertEqual(network_utils.cartwright_harary_balance_ratio(dg), 1)
 
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3, 4, 5])
@@ -244,7 +244,42 @@ class MyTestClass(unittest.TestCase):
         dg.add_edge(1, 5, weight=1)
         dg.add_edge(5, 1, weight=-1)
         dg.add_edge(2, 1, weight=1)
-        self.assertEqual(network_utils.cartwright_harary_balance(dg), 0.5)
+        self.assertEqual(
+            network_utils.cartwright_harary_balance_ratio(dg), 0.5)
+
+    # =========================================================================
+    # ========================= sprase_balance_ratio ==========================
+    # =========================================================================
+    def test_sparse_balance_ratio_raises_when_incorrect_balance_type(self):
+        with self.assertRaises(ValueError):
+            network_utils.sprase_balance_ratio(
+                dgraph=nx.DiGraph(),
+                balance_type=0)
+
+    @parameterized.expand([
+        ['CartwrightHarary', 1, [0.3, 3, 7]],
+        ['Clustering', 2, [0.5, 5, 5]],
+        ['Transitivity', 3, [0.9, 9, 1]]])
+    def test_sprase_balance_ratio(
+            self,
+            name,
+            balance_type,
+            expected_values):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4, 5])
+        dg.add_edge(1, 2, weight=5)
+        dg.add_edge(2, 3, weight=-4)
+        dg.add_edge(3, 1, weight=-7)
+        dg.add_edge(3, 4, weight=-1)
+        dg.add_edge(4, 1, weight=-2)
+        dg.add_edge(1, 5, weight=9)
+        dg.add_edge(5, 1, weight=-11)
+        dg.add_edge(2, 1, weight=100)
+        computed = network_utils.sprase_balance_ratio(
+            dgraph=dg,
+            balance_type=balance_type)
+        np.testing.assert_array_almost_equal(
+            computed, expected_values, decimal=2)
 
     # =========================================================================
     # ====================== count_different_signed_edges =====================

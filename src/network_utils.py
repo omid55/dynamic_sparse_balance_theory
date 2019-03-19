@@ -1,9 +1,11 @@
+###############################################################################
 # Omid55
 # Start date:     16 Oct 2018
-# Modified date:  22 Nov 2018
+# Modified date:  19 Mar 2019
 # Author:   Omid Askarisichani
 # Email:    omid55@cs.ucsb.edu
 # Dynamic networks and specificly structural balance theory utility module.
+###############################################################################
 
 from __future__ import division
 from __future__ import print_function
@@ -28,6 +30,9 @@ from typing import Tuple
 import utils
 
 
+###############################################################################
+#                       Network related functions
+###############################################################################
 # @enforce.runtime_validation
 def extract_graph(
         selected_edge_list: pd.DataFrame,
@@ -297,45 +302,18 @@ def get_metrics_for_network(
 
 
 # @enforce.runtime_validation
-def cartwright_harary_balance(dgraph: nx.DiGraph) -> float:
-    """Computes the cartwright and harary balance ratio.
-
-    It computes all cycles in the network. Then for them, it counts
-    the number of cycles that have even number of negative signs. By
-    Cartwright and Hararry '1956, those are not balanced. This function
-    returns the ration of those by all cycles in the given directed graph.
+def count_different_signed_edges(dgraph: nx.DiGraph) -> int:
+    """Counts the number of edges with different signs.
 
     Args:
         dgraph: Directed graph that is given for computing balance ratio.
 
     Returns:
-        Number of cycles with even number of negative divided by all cycles.
+        Number of edges with different signs in the given directed graph.
 
     Raises:
         None
     """
-    balanced_cycle_count = 0
-    cycle_count = 0
-    for cycle in nx.simple_cycles(dgraph):
-        cycle_count += 1
-        cycle += [cycle[0]]
-        # For every cycle we count the number of negative edges.
-        negative_count = 0
-        for index in range(len(cycle) - 1):
-            if dgraph.get_edge_data(
-                    cycle[index], cycle[index + 1])['weight'] < 0:
-                negative_count += 1
-        if negative_count % 2 == 0:
-            balanced_cycle_count += 1
-    if cycle_count:
-        balance_ratio = balanced_cycle_count / cycle_count
-    else:
-        balance_ratio = 1
-    return balance_ratio
-
-
-# @enforce.runtime_validation
-def count_different_signed_edges(dgraph: nx.DiGraph) -> int:
     different_signs = 0
     nodes = list(dgraph.nodes())
     for i in range(len(nodes)-1):
@@ -349,90 +327,6 @@ def count_different_signed_edges(dgraph: nx.DiGraph) -> int:
                 if np.sign(wij) != np.sign(wji):
                     different_signs += 1
     return different_signs
-
-
-# @enforce.runtime_validation
-def compute_vanderijt_edge_balance(
-        dgraph: nx.DiGraph) -> Dict[tuple, Dict[str, int]]:
-    """Computes edge balance based on Van De Rijt (2011).
-
-    Args:
-        dgraph: Directed weighted graph to apply edge balance.
-
-    Returns:
-        Dictionary of edges mapped to the number of balanced
-            and total number of triads the edge is involved in.
-
-    Raises:
-        None
-    """
-    edge_sign = {}
-    for edge in dgraph.edges():
-        nodes3 = 0
-        balanced_node3 = 0
-
-        nodes = list(set(dgraph.nodes()) - set(edge))
-        xij = dgraph.get_edge_data(edge[0], edge[1])['weight']
-        for node in nodes:
-            if (dgraph.has_edge(edge[0], node)
-                    and dgraph.has_edge(node, edge[1])):
-                xik = dgraph.get_edge_data(edge[0], node)['weight']
-                xkj = dgraph.get_edge_data(node, edge[1])['weight']
-                nodes3 += 1
-                if np.sign(xij * xik * xkj) > 0:
-                    balanced_node3 += 1
-
-        if nodes3:
-            edge_sign[edge] = {
-                '#balanced_node3': balanced_node3,
-                '#nodes3': nodes3}
-    return edge_sign
-
-    # edge_balance = {}
-    # cycle3s = set()
-
-    # for edge in dgraph.edges():
-    #     triad_count = 0
-    #     balanced_count = 0
-    #     weight_sum = 0
-    #     weight_distance = 0
-
-    #     nodes = list(set(dgraph.nodes()) - set(edge))
-    #     xij = dgraph.get_edge_data(edge[0], edge[1])['weight']
-    #     for node in nodes:
-    #         if dgraph.has_edge(
-    #                 edge[1], node) and dgraph.has_edge(node, edge[0]):
-    #             triad_str = ','.join((str(edge[1]), str(node), str(edge[0])))
-    #             if not no_isomorph_cycles or (
-    #                     no_isomorph_cycles and (triad_str not in cycle3s)):
-    #                 if triad_str not in cycle3s:
-    #                     triad_isomorph1_str = ','.join(
-    #                         (str(edge[0]), str(edge[1]), str(node)))
-    #                     triad_isomorph2_str = ','.join(
-    #                         (str(node), str(edge[0]), str(edge[1])))
-    #                     cycle3s = cycle3s.union(
-    #                         set([triad_str,
-    #                              triad_isomorph1_str,
-    #                              triad_isomorph2_str]))
-
-    #                 triad_count += 1
-    #                 xik = dgraph.get_edge_data(edge[1], node)['weight']
-    #                 xkj = dgraph.get_edge_data(node, edge[0])['weight']
-
-    #                 weight_sum += np.sign(xik) * np.sign(xkj)
-
-    #                 weight_distance += abs(xij - (xik * xkj))
-    #                 if np.sign(xij * xik * xkj) > 0:
-    #                     balanced_count += 1
-
-    #     if triad_count:
-    #         as_expected_sign = int(np.sign(weight_sum) == np.sign(xij))
-    #         edge_balance[edge] = {
-    #             '#balanced': balanced_count,
-    #             '#cycle3': triad_count,
-    #             'weight_distance': weight_distance,
-    #             'as_expected_sign': as_expected_sign}
-    # return edge_balance
 
 
 # @enforce.runtime_validation
@@ -550,6 +444,190 @@ def compute_fairness_goodness(
             break
 
     return {'fairness': fairness, 'goodness': goodness}
+
+
+###############################################################################
+#                       Balance related functions
+###############################################################################
+# @enforce.runtime_validation
+def cartwright_harary_balance_ratio(dgraph: nx.DiGraph) -> float:
+    """Computes the cartwright and harary balance ratio.
+
+    It computes all cycles in the network. Then for them, it counts
+    the number of cycles that have even number of negative signs. By
+    Cartwright and Hararry '1956, those are not balanced. This function
+    returns the ration of those by all cycles in the given directed graph.
+
+    Args:
+        dgraph: Directed graph that is given for computing balance ratio.
+
+    Returns:
+        Number of cycles with even number of negative divided by all cycles.
+
+    Raises:
+        None
+    """
+    balanced_cycle_count = 0
+    cycle_count = 0
+    for cycle in nx.simple_cycles(dgraph):
+        cycle_count += 1
+        cycle += [cycle[0]]
+        # For every cycle we count the number of negative edges.
+        negative_count = 0
+        for index in range(len(cycle) - 1):
+            if dgraph.get_edge_data(
+                    cycle[index], cycle[index + 1])['weight'] < 0:
+                negative_count += 1
+        if negative_count % 2 == 0:
+            balanced_cycle_count += 1
+    if cycle_count:
+        balance_ratio = balanced_cycle_count / cycle_count
+    else:
+        balance_ratio = 1
+    return balance_ratio
+
+
+# @enforce.runtime_validation
+def sprase_balance_ratio(
+        dgraph: nx.DiGraph,
+        balance_type: int = 1) -> Tuple[float, int, int]:
+    """Computes the ratio of balance for all triads.
+
+
+       Parameter balance_type could take 1, 2, or 3. 1 is Cartwright & Harary,
+       2 is Clusering, and 3 is Transitivity.
+
+    Args:
+        dgraph: Directed graph that is given for computing balance ratio.
+
+        balance_type: The definition type for structural balance.
+
+    Returns:
+        The ratio of balance, number of balanced triads, number of unbalanced
+        triads.
+
+    Raises:
+        ValueError: If balance_type was anything but 1, 2 or 3.
+    """
+    if balance_type not in [1, 2, 3]:
+        raise ValueError(
+            'Balance_type was incorrect.'
+            ' It should be 1, 2, or 3. But it was: {}.'.format(balance_type))
+    # Makes the graph signed (unweighted).
+    adj_matrix = utils.dgraph2adjacency(dgraph)
+    adj_matrix[adj_matrix > 0] = 1
+    adj_matrix[adj_matrix < 0] = -1
+    # Generates all possible triads (3 nodes subgraphs).
+    nodes_list = np.array(dgraph.nodes())
+    triads = list(itertools.combinations(range(len(nodes_list)), 3))
+    balanced_triads = 0
+    unbalanced_triads = 0
+    for triad in triads:
+        triad_subgraph_matrix = utils.sub_adjacency_matrix(
+            adj_matrix, list(triad))
+        if balance_type == 1:
+            if is_sparsely_cartwright_harary_balanced(triad_subgraph_matrix):
+                balanced_triads += 1
+            else:
+                unbalanced_triads += 1
+        elif balance_type == 2:
+            if is_sparsely_clustering_balanced(triad_subgraph_matrix):
+                balanced_triads += 1
+            else:
+                unbalanced_triads += 1
+        elif balance_type == 3:
+            if is_sparsely_transitive_balanced(triad_subgraph_matrix):
+                balanced_triads += 1
+            else:
+                unbalanced_triads += 1
+    return (
+        (balanced_triads / len(triads)) if unbalanced_triads else 0,
+        balanced_triads,
+        unbalanced_triads)
+
+
+# @enforce.runtime_validation
+def compute_vanderijt_edge_balance(
+        dgraph: nx.DiGraph) -> Dict[tuple, Dict[str, int]]:
+    """Computes edge balance based on Van De Rijt (2011).
+
+    Args:
+        dgraph: Directed weighted graph to apply edge balance.
+
+    Returns:
+        Dictionary of edges mapped to the number of balanced
+            and total number of triads the edge is involved in.
+
+    Raises:
+        None
+    """
+    edge_sign = {}
+    for edge in dgraph.edges():
+        nodes3 = 0
+        balanced_node3 = 0
+
+        nodes = list(set(dgraph.nodes()) - set(edge))
+        xij = dgraph.get_edge_data(edge[0], edge[1])['weight']
+        for node in nodes:
+            if (dgraph.has_edge(edge[0], node)
+                    and dgraph.has_edge(node, edge[1])):
+                xik = dgraph.get_edge_data(edge[0], node)['weight']
+                xkj = dgraph.get_edge_data(node, edge[1])['weight']
+                nodes3 += 1
+                if np.sign(xij * xik * xkj) > 0:
+                    balanced_node3 += 1
+
+        if nodes3:
+            edge_sign[edge] = {
+                '#balanced_node3': balanced_node3,
+                '#nodes3': nodes3}
+    return edge_sign
+
+    # edge_balance = {}
+    # cycle3s = set()
+
+    # for edge in dgraph.edges():
+    #     triad_count = 0
+    #     balanced_count = 0
+    #     weight_sum = 0
+    #     weight_distance = 0
+
+    #     nodes = list(set(dgraph.nodes()) - set(edge))
+    #     xij = dgraph.get_edge_data(edge[0], edge[1])['weight']
+    #     for node in nodes:
+    #         if dgraph.has_edge(
+    #                 edge[1], node) and dgraph.has_edge(node, edge[0]):
+    #             triad_str = ','.join((str(edge[1]), str(node), str(edge[0])))
+    #             if not no_isomorph_cycles or (
+    #                     no_isomorph_cycles and (triad_str not in cycle3s)):
+    #                 if triad_str not in cycle3s:
+    #                     triad_isomorph1_str = ','.join(
+    #                         (str(edge[0]), str(edge[1]), str(node)))
+    #                     triad_isomorph2_str = ','.join(
+    #                         (str(node), str(edge[0]), str(edge[1])))
+    #                     cycle3s = cycle3s.union(
+    #                         set([triad_str,
+    #                              triad_isomorph1_str,
+    #                              triad_isomorph2_str]))
+
+    #                 triad_count += 1
+    #                 xik = dgraph.get_edge_data(edge[1], node)['weight']
+    #                 xkj = dgraph.get_edge_data(node, edge[0])['weight']
+
+    #                 weight_sum += np.sign(xik) * np.sign(xkj)
+
+    #                 weight_distance += abs(xij - (xik * xkj))
+    #                 if np.sign(xij * xik * xkj) > 0:
+    #                     balanced_count += 1
+
+    #     if triad_count:
+    #         as_expected_sign = int(np.sign(weight_sum) == np.sign(xij))
+    #         edge_balance[edge] = {
+    #             '#balanced': balanced_count,
+    #             '#cycle3': triad_count,
+    #             'weight_distance': weight_distance,
+    #             'as_expected_sign': as_expected_sign}
+    # return edge_balance
 
 
 # @enforce.runtime_validation

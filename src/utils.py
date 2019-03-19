@@ -435,3 +435,70 @@ def load_it(file_path: str, verbose: bool = False) -> object:
     if verbose:
         print('{} is successfully loaded.'.format(file_path))
     return obj
+
+
+# @enforce.runtime_validation
+def plot_box_plot_for_transitions(
+        matrix: np.ndarray,
+        balanced_ones: np.ndarray,
+        fname: str = '') -> None:
+    """Plots a boxplot for transitoins of a set of balanced/unbalanced states.
+
+    Args:
+        matrix: A stochastic transition matrix.
+
+        balanced_ones: Array of boolean of which state is balanced or not.
+
+        fname: File name which if is given, this function saves the figure as.
+
+    Returns:
+        None.
+
+    Raises:
+        ValueError: When the length of matrix and balanced_ones does not match.
+    """
+    if len(matrix) != len(balanced_ones):
+        raise ValueError(
+            'Matrix and balanced states should have the same length: '
+            'len(matrix): {}, len(balanced_ones): {}.'.format(
+                len(matrix), len(balanced_ones)))
+
+    # Computes the transitions.
+    probs1 = np.sum(matrix[balanced_ones, :][:, balanced_ones], axis=1)
+    probs2 = np.sum(matrix[~balanced_ones, :][:, balanced_ones], axis=1)
+    probs3 = np.sum(matrix[~balanced_ones, :][:, ~balanced_ones], axis=1)
+    probs4 = np.sum(matrix[balanced_ones, :][:, ~balanced_ones], axis=1)
+
+    # Draws the boxplot.
+    labels = (
+        ['balanced -> balanced',
+         'unbalanced -> balanced',
+         'unbalanced -> unbalanced',
+         'balanced -> unbalanced'])
+    f = plt.figure()
+    bp = plt.boxplot(
+        [np.array(probs1),
+         np.array(probs2),
+         np.array(probs3),
+         np.array(probs4)],
+        labels=labels,
+        vert=False)
+    plt.title(fname)
+
+    # Makes the linewidth larger.
+    for box in bp['boxes']:
+        # change outline color
+        box.set(linewidth=2)
+    # Changes the color and linewidth of the whiskers.
+    for whisker in bp['whiskers']:
+        whisker.set(linewidth=2)
+    # Changes the color and linewidth of the caps.
+    for cap in bp['caps']:
+        cap.set(linewidth=2)
+    # Changes color and linewidth of the medians.
+    for median in bp['medians']:
+        median.set(linewidth=2)
+
+    # If filename is given then saves the file.
+    if fname:
+        f.savefig(fname+'.pdf', bbox_inches='tight')
