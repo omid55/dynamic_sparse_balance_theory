@@ -212,7 +212,7 @@ class MyTestClass(unittest.TestCase):
     # =========================================================================
     # ====================== cartwright_harary_balance_ratio ==================
     # =========================================================================
-    def test_cartwright_harary_balance_ratio(self):
+    def test_cartwright_harary_balance_ratio_notbalanced_graph1(self):
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3])
         dg.add_edge(1, 2, weight=1)
@@ -220,6 +220,7 @@ class MyTestClass(unittest.TestCase):
         dg.add_edge(3, 1, weight=-1)
         self.assertEqual(network_utils.cartwright_harary_balance_ratio(dg), 0)
 
+    def test_cartwright_harary_balance_ratio_notbalanced_graph2(self):
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3])
         dg.add_edge(1, 2, weight=-1)
@@ -227,6 +228,7 @@ class MyTestClass(unittest.TestCase):
         dg.add_edge(3, 1, weight=-1)
         self.assertEqual(network_utils.cartwright_harary_balance_ratio(dg), 0)
 
+    def test_cartwright_harary_balance_ratio_balanced_graph(self):
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3])
         dg.add_edge(1, 2, weight=1)
@@ -234,6 +236,7 @@ class MyTestClass(unittest.TestCase):
         dg.add_edge(3, 1, weight=-1)
         self.assertEqual(network_utils.cartwright_harary_balance_ratio(dg), 1)
 
+    def test_cartwright_harary_balance_ratio_halfbalanced_graph(self):
         dg = nx.DiGraph()
         dg.add_nodes_from([1, 2, 3, 4, 5])
         dg.add_edge(1, 2, weight=1)
@@ -308,6 +311,102 @@ class MyTestClass(unittest.TestCase):
         dg.add_edge(3, 1, weight=9)
         dg.add_edge(1, 3, weight=-2)
         self.assertEqual(network_utils.count_different_signed_edges(dg), 2)
+
+    # =========================================================================
+    # ============= terzi_undirected_sprase_balance_ratio =====================
+    # =========================================================================
+    def test_terzi_undirected_sprase_balance_ratio_notbalanced_graph1(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=1)
+        dg.add_edge(3, 1, weight=-1)
+        expected = 0
+        computed = network_utils.terzi_undirected_sprase_balance_ratio(dg)
+        np.testing.assert_almost_equal(computed, expected)
+
+    def test_terzi_undirected_sprase_balance_ratio_notbalanced_graph2(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=-1)
+        dg.add_edge(2, 3, weight=-1)
+        dg.add_edge(3, 1, weight=-1)
+        expected = 0
+        computed = network_utils.terzi_undirected_sprase_balance_ratio(dg)
+        np.testing.assert_almost_equal(computed, expected)
+
+    def test_terzi_undirected_sprase_balance_ratio_balanced_graph(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=-1)
+        dg.add_edge(3, 1, weight=-1)
+        expected = 1
+        computed = network_utils.terzi_undirected_sprase_balance_ratio(dg)
+        np.testing.assert_almost_equal(computed, expected)
+
+    def test_terzi_undirected_sprase_balance_ratio_halfbalanced_graph(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4, 5])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=-1)
+        dg.add_edge(3, 1, weight=-1)
+        dg.add_edge(3, 4, weight=-1)
+        dg.add_edge(4, 1, weight=-1)
+        dg.add_edge(1, 5, weight=1)
+        dg.add_edge(5, 1, weight=-1)
+        dg.add_edge(2, 1, weight=1)
+        expected = 0.5
+        computed = network_utils.terzi_undirected_sprase_balance_ratio(dg)
+        np.testing.assert_almost_equal(computed, expected)
+
+    # =========================================================================
+    # ============= kunegis_undirected_sprase_balance_ratio ===================
+    # =========================================================================
+    def test_kunegis_undirected_sprase_balance_ratio_notbalanced_graph1(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=1)
+        dg.add_edge(3, 1, weight=-1)
+        expected = 0
+        computed = network_utils.kunegis_undirected_sprase_balance_ratio(dg)
+        np.testing.assert_almost_equal(computed, expected)
+
+    def test_kunegis_undirected_sprase_balance_ratio_notbalanced_graph2(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=-1)
+        dg.add_edge(2, 3, weight=-1)
+        dg.add_edge(3, 1, weight=-1)
+        expected = 0
+        computed = network_utils.kunegis_undirected_sprase_balance_ratio(dg)
+        np.testing.assert_almost_equal(computed, expected)
+
+    def test_kunegis_undirected_sprase_balance_ratio_balanced_graph(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=-1)
+        dg.add_edge(3, 1, weight=-1)
+        expected = 1
+        computed = network_utils.kunegis_undirected_sprase_balance_ratio(dg)
+        np.testing.assert_almost_equal(computed, expected)
+
+    def test_kunegis_undirected_sprase_balance_ratio_halfbalanced_graph(self):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4, 5])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 3, weight=-1)
+        dg.add_edge(3, 1, weight=-1)
+        dg.add_edge(3, 4, weight=-1)
+        dg.add_edge(4, 1, weight=-1)
+        dg.add_edge(1, 5, weight=1)
+        dg.add_edge(5, 1, weight=-1)
+        dg.add_edge(2, 1, weight=1)
+        expected = 0.6
+        computed = network_utils.kunegis_undirected_sprase_balance_ratio(dg)
+        np.testing.assert_almost_equal(computed, expected, decimal=1)
 
     # =========================================================================
     # ====================== compute_vanderijt_edge_balance ===================

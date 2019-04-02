@@ -1,7 +1,7 @@
 ###############################################################################
 # Omid55
 # Start date:     16 Oct 2018
-# Modified date:  19 Mar 2019
+# Modified date:  02 Apr 2019
 # Author:   Omid Askarisichani
 # Email:    omid55@cs.ucsb.edu
 # Dynamic networks and specificly structural balance theory utility module.
@@ -457,6 +457,12 @@ def cartwright_harary_balance_ratio(dgraph: nx.DiGraph) -> float:
     the number of cycles that have even number of negative signs. By
     Cartwright and Hararry '1956, those are not balanced. This function
     returns the ration of those by all cycles in the given directed graph.
+    Cartwright and Hararry balance for node i: This can be also used for
+    defining balance for node i as the it should compute all cycles containing
+    node i in the network and then should compute the ratio of positive cycles
+    (the cycles with multiplication of all signs to be positive) to all cycles
+    (Hararry 1955 [On local balance and $N$-balance in signed graphs]).
+    However, generally it is very computationally expensive to compute.
 
     Args:
         dgraph: Directed graph that is given for computing balance ratio.
@@ -492,7 +498,6 @@ def sprase_balance_ratio(
         dgraph: nx.DiGraph,
         balance_type: int = 1) -> Tuple[float, int, int]:
     """Computes the ratio of balance for all triads.
-
 
        Parameter balance_type could take 1, 2, or 3. 1 is Cartwright & Harary,
        2 is Clusering, and 3 is Transitivity.
@@ -544,6 +549,94 @@ def sprase_balance_ratio(
         (balanced_triads / len(triads)) if unbalanced_triads else 0,
         balanced_triads,
         unbalanced_triads)
+
+
+# @enforce.runtime_validation
+def terzi_undirected_sprase_balance_ratio(dgraph: nx.DiGraph) -> float:
+    """Computes Terzi and Winkler (2011) generalized balance ratio.
+
+    It computes an approximated balance ratio of balanced triads divided by all
+    triads (similar to Cartwright and Harary but only for triads) for sparse
+    (aribtrary) networks using an efficient spectral algorithm
+    (Terzi and Winkler (2011) [A spectral algorithm for computing social
+    balance]). It works only for undirected graphs.
+    Note if we remove the to_undirected function and returns np.real part of
+    the balance ratio, this function looks at exaclty directed cyclic triads
+    (e.g., 1->2->3->1) and ignores any other triads that does not create a
+    proper cycle (The function works fine in that sense; however, as far as I
+    know, this does not make much sense with directed balance theory).
+
+    Args:
+        dgraph: Directed weighted graph to apply edge balance.
+
+    Returns:
+        The approximated ratio of balance.
+
+    Raises:
+        None
+    """
+    # Makes the graph undirected (if not already).
+    graph = nx.to_undirected(dgraph)
+    # Makes the graph signed (unweighted).
+    adj_matrix = utils.dgraph2adjacency(graph)
+    adj_matrix[adj_matrix > 0] = 1
+    adj_matrix[adj_matrix < 0] = -1
+    connectivity_matrix = abs(adj_matrix)
+    n, _ = adj_matrix.shape
+    lambdas, _ = np.linalg.eig(adj_matrix)
+    mus, _ = np.linalg.eig(connectivity_matrix)
+    balance_ratio = (
+        0.5 * (1 + np.sum(np.power(lambdas, 3)) / np.sum(np.power(mus, 3))))
+    return balance_ratio   # np.real(balance_ratio)
+
+
+# @enforce.runtime_validation
+def kunegis_undirected_sprase_balance_ratio(dgraph: nx.DiGraph) -> float:
+    """Computes Kunegis et al. (2010) generalized balance ratio.
+
+    It computes anapproximated balance ratio using spectral analysis of signed
+    laplacian matrix. More info can be found in the paper Kunegis et al. (2010)
+    [Spectral Analysis of Signed Graphs for Clustering, Prediction and
+    Visualization].
+
+    Args:
+        dgraph: Directed weighted graph to apply edge balance.
+
+    Returns:
+        The approximated ratio of balance.
+
+    Raises:
+        None
+    """
+    # Makes the graph undirected (if not already).
+    # graph = nx.to_undirected(dgraph)
+    # # Makes the graph signed (unweighted).
+    # adj_matrix = np.array(nx.adjacency_matrix(graph).todense())
+    # adj_matrix[adj_matrix > 0] = 1
+    # adj_matrix[adj_matrix < 0] = -1
+    # n, _ = adj_matrix.shape
+    # # Computes the smallest eigenvalue of the signed normalized laplacian.
+    # signed_degree_matrix = np.diag(np.sum(abs(adj_matrix), axis=1))
+    # laplacian_matrix = signed_degree_matrix - adj_matrix
+    # diags = np.sum(abs(adj_matrix), axis=1).flatten()
+    # diags_sqrt = 1.0/sp.sqrt(diags)
+    # diags_sqrt[sp.isinf(diags_sqrt)] = 0
+    # degree_sqrt = np.diag(diags_sqrt)
+    # normalized_laplacian_matrix = np.eye(n) - np.dot(
+    #     degree_sqrt, np.dot(laplacian_matrix, degree_sqrt))
+    # lambdas, _ = np.linalg.eig(normalized_laplacian_matrix)
+    # return min(lambdas)
+    graph = nx.to_undirected(dgraph)
+    # Makes the graph signed (unweighted).
+    adj_matrix = utils.dgraph2adjacency(graph)
+    adj_matrix[adj_matrix > 0] = 1
+    adj_matrix[adj_matrix < 0] = -1
+    n, _ = adj_matrix.shape
+    # Computes the smallest eigenvalue of the signed normalized laplacian.
+    signed_degree_matrix = np.diag(np.sum(abs(adj_matrix), axis=1))
+    laplacian_matrix = signed_degree_matrix - adj_matrix
+    lambdas, _ = np.linalg.eig(laplacian_matrix)
+    return 1 - min(lambdas)
 
 
 # @enforce.runtime_validation
@@ -683,7 +776,7 @@ def is_sparsely_cartwright_harary_balanced(
     """Checks whether input triad matrix is balanced or not w.r.t. C & H.
 
     Cartwright and Harary balance is defined on multiplication of every 3 edge
-    to be always positive. In the case of sparsity, whether two edge exists,
+    to be always positive. In the case of sparsity, whether two edge exist,
     the third edge should also exist. If only one exist the third is not
     required.
     This also is aligned with Kulakowski (2005) paper because:
