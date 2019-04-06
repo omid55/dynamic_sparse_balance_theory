@@ -552,7 +552,9 @@ def sprase_balance_ratio(
 
 
 # @enforce.runtime_validation
-def terzi_undirected_sprase_balance_ratio(dgraph: nx.DiGraph) -> float:
+def terzi_sprase_balance_ratio(
+        dgraph: nx.DiGraph,
+        undirected: bool = True) -> float:
     """Computes Terzi and Winkler (2011) generalized balance ratio.
 
     It computes an approximated balance ratio of balanced triads divided by all
@@ -576,7 +578,10 @@ def terzi_undirected_sprase_balance_ratio(dgraph: nx.DiGraph) -> float:
         None
     """
     # Makes the graph undirected (if not already).
-    graph = nx.to_undirected(dgraph)
+    if undirected:
+        graph = nx.to_undirected(dgraph)
+    else:
+        graph = dgraph
     # Makes the graph signed (unweighted).
     adj_matrix = utils.dgraph2adjacency(graph)
     adj_matrix[adj_matrix > 0] = 1
@@ -587,17 +592,26 @@ def terzi_undirected_sprase_balance_ratio(dgraph: nx.DiGraph) -> float:
     mus, _ = np.linalg.eig(connectivity_matrix)
     balance_ratio = (
         0.5 * (1 + np.sum(np.power(lambdas, 3)) / np.sum(np.power(mus, 3))))
-    return balance_ratio   # np.real(balance_ratio)
+    if not undirected:
+        balance_ratio = np.real(balance_ratio)
+    return balance_ratio
 
 
 # @enforce.runtime_validation
-def kunegis_undirected_sprase_balance_ratio(dgraph: nx.DiGraph) -> float:
+def kunegis_sprase_balance_ratio(
+        dgraph: nx.DiGraph,
+        undirected: bool = True) -> float:
     """Computes Kunegis et al. (2010) generalized balance ratio.
 
-    It computes anapproximated balance ratio using spectral analysis of signed
+    It computes an approximated balance ratio using spectral analysis of signed
     laplacian matrix. More info can be found in the paper Kunegis et al. (2010)
     [Spectral Analysis of Signed Graphs for Clustering, Prediction and
     Visualization].
+    Note if we remove the to_undirected function and returns np.real part of
+    the balance ratio, this function looks at exaclty directed cyclic triads
+    (e.g., 1->2->3->1) and ignores any other triads that does not create a
+    proper cycle (The function works fine in that sense; however, as far as I
+    know, this does not make much sense with directed balance theory).
 
     Args:
         dgraph: Directed weighted graph to apply edge balance.
@@ -626,7 +640,10 @@ def kunegis_undirected_sprase_balance_ratio(dgraph: nx.DiGraph) -> float:
     #     degree_sqrt, np.dot(laplacian_matrix, degree_sqrt))
     # lambdas, _ = np.linalg.eig(normalized_laplacian_matrix)
     # return min(lambdas)
-    graph = nx.to_undirected(dgraph)
+    if undirected:
+        graph = nx.to_undirected(dgraph)
+    else:
+        graph = dgraph
     # Makes the graph signed (unweighted).
     adj_matrix = utils.dgraph2adjacency(graph)
     adj_matrix[adj_matrix > 0] = 1
@@ -636,7 +653,10 @@ def kunegis_undirected_sprase_balance_ratio(dgraph: nx.DiGraph) -> float:
     signed_degree_matrix = np.diag(np.sum(abs(adj_matrix), axis=1))
     laplacian_matrix = signed_degree_matrix - adj_matrix
     lambdas, _ = np.linalg.eig(laplacian_matrix)
-    return 1 - min(lambdas)
+    result = 1 - min(lambdas)
+    if not undirected:
+        result = np.real(result)
+    return result
 
 
 # @enforce.runtime_validation
