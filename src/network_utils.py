@@ -494,16 +494,80 @@ def cartwright_harary_balance_ratio(dgraph: nx.DiGraph) -> float:
 
 
 # @enforce.runtime_validation
-def sprase_balance_ratio(
+def classical_balance_ratio(
         dgraph: nx.DiGraph,
         balance_type: int = 1) -> Tuple[float, int, int]:
-    """Computes the ratio of balance for all triads.
+    """Computes the ratio of classical balance for all triads.
 
        Parameter balance_type could take 1, 2, or 3. 1 is Cartwright & Harary,
        2 is Clusering, and 3 is Transitivity.
 
     Args:
-        dgraph: Directed graph that is given for computing balance ratio.
+        dgraph: Given directed graph with 0 and +1.
+
+        balance_type: The definition type for structural balance.
+
+    Returns:
+        The ratio of balance, number of balanced triads, number of unbalanced
+        triads.
+
+    Raises:
+        ValueError: If balance_type was anything but 1, 2 or 3.
+    """
+    if balance_type not in [1, 2, 3]:
+        raise ValueError(
+            'Balance_type was incorrect.'
+            ' It should be 1, 2, or 3. But it was: {}.'.format(balance_type))
+    # The adjancey matrix.
+    adj_matrix = utils.dgraph2adjacency(dgraph)
+    adj_matrix[adj_matrix > 0] = 1
+
+    # Makes sure that the dgraph is binary (contaings only 0 and 1).
+    if np.any(adj_matrix < 0):
+        raise ValueError(
+            'Directed graph should only have 0 and 1'
+            ' as edge weight in checking classical balance ratio.')
+
+    # Generates all possible triads (3 nodes subgraphs).
+    nodes_list = np.array(dgraph.nodes())
+    triads = list(itertools.combinations(range(len(nodes_list)), 3))
+    balanced_triads = 0
+    unbalanced_triads = 0
+    for triad in triads:
+        triad_subgraph_matrix = utils.sub_adjacency_matrix(
+            adj_matrix, list(triad))
+        if balance_type == 1:
+            if is_classically_balanced(triad_subgraph_matrix):
+                balanced_triads += 1
+            else:
+                unbalanced_triads += 1
+        elif balance_type == 2:
+            if is_classical_clustering_balanced(triad_subgraph_matrix):
+                balanced_triads += 1
+            else:
+                unbalanced_triads += 1
+        elif balance_type == 3:
+            if is_classical_transitivity_balanced(triad_subgraph_matrix):
+                balanced_triads += 1
+            else:
+                unbalanced_triads += 1
+    return (
+        (balanced_triads / len(triads)) if len(triads) > 0 else 0,
+        balanced_triads,
+        unbalanced_triads)
+
+
+# @enforce.runtime_validation
+def sprase_balance_ratio(
+        dgraph: nx.DiGraph,
+        balance_type: int = 1) -> Tuple[float, int, int]:
+    """Computes the ratio of sparse balance for all triads.
+
+       Parameter balance_type could take 1, 2, or 3. 1 is Cartwright & Harary,
+       2 is Clusering, and 3 is Transitivity.
+
+    Args:
+        dgraph: Given directed graph with 0, +1 and -1.
 
         balance_type: The definition type for structural balance.
 
@@ -546,7 +610,7 @@ def sprase_balance_ratio(
             else:
                 unbalanced_triads += 1
     return (
-        (balanced_triads / len(triads)) if unbalanced_triads else 0,
+        (balanced_triads / len(triads)) if len(triads) > 0 else 0,
         balanced_triads,
         unbalanced_triads)
 
@@ -900,6 +964,112 @@ def is_sparsely_clustering_balanced(
 #                     and (triad[i, j] != triad[i, k]*triad[k, j])):
 #                 return False
 #     return True
+
+
+# @enforce.runtime_validation
+def is_classically_balanced(triad: np.ndarray) -> bool:
+    """Checks whether the fully connected input triad is classically balanced.
+
+    Args:
+        triad: Input triad matrix with only 0 and 1.
+
+        everyone_aware_of_others: Is everyone aware of others or not.
+
+    Returns:
+        Boolean result whether triad is transitively balanced or not.
+
+    Raises:
+        ValueError: If there is a self loop in the given triad or triad was not
+        3 * 3.
+    """
+    n, m = triad.shape
+    if n != 3 or m != 3:
+        raise ValueError('Triad has unexpected shape.')
+    for i in range(n):
+        if triad[i, i]:
+            raise ValueError('There is a self loop in given triad: {}.'.format(
+                triad))
+    if np.any(triad < 0):
+        raise ValueError('Triad should only consist of 0 and 1:\n {}.'.format(
+            triad))
+    signed_triad = triad.copy()
+    signed_triad[signed_triad == 0] = -1
+    for (i, j, k) in list(itertools.permutations([0, 1, 2])):
+        if (signed_triad[i, j] * signed_triad[i, k] * signed_triad[k, j]) != 1:
+            return False
+    return True
+
+
+# @enforce.runtime_validation
+def is_classical_clustering_balanced(triad: np.ndarray) -> bool:
+    """Checks whether the fully connected input triad is clustering balanced.
+
+    Args:
+        triad: Input triad matrix with only 0 and 1.
+
+        everyone_aware_of_others: Is everyone aware of others or not.
+
+    Returns:
+        Boolean result whether triad is transitively balanced or not.
+
+    Raises:
+        ValueError: If there is a self loop in the given triad or triad was not
+        3 * 3.
+    """
+    n, m = triad.shape
+    if n != 3 or m != 3:
+        raise ValueError('Triad has unexpected shape.')
+    for i in range(n):
+        if triad[i, i]:
+            raise ValueError('There is a self loop in given triad: {}.'.format(
+                triad))
+    if np.any(triad < 0):
+        raise ValueError('Triad should only consist of 0 and 1:\n {}.'.format(
+            triad))
+    signed_triad = triad.copy()
+    signed_triad[signed_triad == 0] = -1
+    for (i, j, k) in list(itertools.permutations([0, 1, 2])):
+        if signed_triad[i, k] > 0 or signed_triad[k, j] > 0:
+            xijk = signed_triad[i, j] * signed_triad[i, k] * signed_triad[k, j]
+            if xijk != 1:
+                return False
+    return True
+
+
+# @enforce.runtime_validation
+def is_classical_transitivity_balanced(triad: np.ndarray) -> bool:
+    """Checks whether the fully connected input triad is transivitiy balanced.
+
+    Args:
+        triad: Input triad matrix with only 0 and 1.
+
+        everyone_aware_of_others: Is everyone aware of others or not.
+
+    Returns:
+        Boolean result whether triad is transitively balanced or not.
+
+    Raises:
+        ValueError: If there is a self loop in the given triad or triad was not
+        3 * 3.
+    """
+    n, m = triad.shape
+    if n != 3 or m != 3:
+        raise ValueError('Triad has unexpected shape.')
+    for i in range(n):
+        if triad[i, i]:
+            raise ValueError('There is a self loop in given triad: {}.'.format(
+                triad))
+    if np.any(triad < 0):
+        raise ValueError('Triad should only consist of 0 and 1:\n {}.'.format(
+            triad))
+    signed_triad = triad.copy()
+    signed_triad[signed_triad == 0] = -1
+    for (i, j, k) in list(itertools.permutations([0, 1, 2])):
+        if signed_triad[i, k] > 0 and signed_triad[k, j] > 0:
+            xijk = signed_triad[i, j] * signed_triad[i, k] * signed_triad[k, j]
+            if xijk != 1:
+                return False
+    return True
 
 
 # @enforce.runtime_validation

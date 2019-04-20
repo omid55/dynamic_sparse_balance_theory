@@ -441,7 +441,9 @@ def load_it(file_path: str, verbose: bool = False) -> object:
 def plot_box_plot_for_transitions(
         matrix: np.ndarray,
         balanced_ones: np.ndarray,
-        fname: str = '') -> None:
+        with_labels: bool = True,
+        fname: str = '',
+        ftitle: str = '') -> None:
     """Plots a boxplot for transitoins of a set of balanced/unbalanced states.
 
     Args:
@@ -450,6 +452,8 @@ def plot_box_plot_for_transitions(
         balanced_ones: Array of boolean of which state is balanced or not.
 
         fname: File name which if is given, this function saves the figure as.
+
+        ftitle: Figure title if given.
 
     Returns:
         None.
@@ -470,11 +474,13 @@ def plot_box_plot_for_transitions(
     probs4 = np.sum(matrix[balanced_ones, :][:, ~balanced_ones], axis=1)
 
     # Draws the boxplot.
-    labels = (
-        ['balanced -> balanced',
-         'unbalanced -> balanced',
-         'unbalanced -> unbalanced',
-         'balanced -> unbalanced'])
+    labels = None
+    if with_labels:
+        labels = (
+            ['balanced -> balanced',
+             'unbalanced -> balanced',
+             'unbalanced -> unbalanced',
+             'balanced -> unbalanced'])
     f = plt.figure()
     bp = plt.boxplot(
         [np.array(probs1),
@@ -482,8 +488,12 @@ def plot_box_plot_for_transitions(
          np.array(probs3),
          np.array(probs4)],
         labels=labels,
-        vert=False)
-    plt.title(fname)
+        vert=False,
+        showfliers=False)
+    # Default values:
+    #   whis=1.5
+    if ftitle:
+        plt.title(ftitle)
 
     # Makes the linewidth larger.
     for box in bp['boxes']:

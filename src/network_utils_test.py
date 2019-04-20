@@ -285,6 +285,50 @@ class MyTestClass(unittest.TestCase):
             computed, expected_values, decimal=2)
 
     # =========================================================================
+    # ======================= classical_balance_ratio =========================
+    # =========================================================================
+    def test_classical_balance_ratio_raises_when_incorrect_balance_type(self):
+        with self.assertRaises(ValueError):
+            network_utils.classical_balance_ratio(
+                dgraph=nx.DiGraph(),
+                balance_type=0)
+
+    def test_classical_balance_ratio_raises_when_negative_in_dgraph(self):
+        with self.assertRaises(ValueError):
+            dg = nx.DiGraph()
+            dg.add_nodes_from([1, 2])
+            dg.add_edge(1, 2, weight=1)
+            dg.add_edge(2, 1, weight=-1)
+            network_utils.classical_balance_ratio(
+                dgraph=dg,
+                balance_type=1)
+
+    @parameterized.expand([
+        ['Classical', 1, [0.4, 4, 6]],
+        ['Clustering', 2, [0.7, 7, 3]],
+        ['Transitivity', 3, [0.8, 8, 2]]])
+    def test_classical_balance_ratio(
+            self,
+            name,
+            balance_type,
+            expected_values):
+        dg = nx.DiGraph()
+        dg.add_nodes_from([1, 2, 3, 4, 5])
+        dg.add_edge(1, 2, weight=1)
+        dg.add_edge(2, 1, weight=1)
+        dg.add_edge(5, 1, weight=1)
+        dg.add_edge(1, 5, weight=1)
+        dg.add_edge(5, 2, weight=1)
+        dg.add_edge(2, 5, weight=1)
+        dg.add_edge(5, 3, weight=1)
+        dg.add_edge(2, 3, weight=1)
+        computed = network_utils.classical_balance_ratio(
+            dgraph=dg,
+            balance_type=balance_type)
+        np.testing.assert_array_almost_equal(
+            computed, expected_values, decimal=2)
+
+    # =========================================================================
     # ====================== count_different_signed_edges =====================
     # =========================================================================
     def test_count_different_signed_edges(self):
@@ -859,6 +903,291 @@ class MyTestClass(unittest.TestCase):
             self, name, triad, expected_balance):
         self.assertEqual(
             network_utils.is_sparsely_clustering_balanced(triad),
+            expected_balance)
+
+    # =========================================================================
+    # =================== is_classically_balanced =============================
+    # =========================================================================
+    def test_is_classically_balanced_raises_when_self_loops(
+            self):
+        with self.assertRaises(ValueError):
+            triad_with_self_loop = np.array(
+                [[0, 1, 0],
+                 [0, 1, 1],
+                 [0, 0, 0]])
+            network_utils.is_classically_balanced(
+                triad_with_self_loop)
+
+    def test_is_classically_balanced_raises_when_negative(
+            self):
+        with self.assertRaises(ValueError):
+            triad_with_self_loop = np.array(
+                [[0, 1, 0],
+                 [0, 1, 1],
+                 [-1, 0, 0]])
+            network_utils.is_classically_balanced(
+                triad_with_self_loop)
+
+    @parameterized.expand([
+        ["300", np.array(
+            [[0, 1, 1],
+             [1, 0, 1],
+             [1, 1, 0]]), True],
+        ["102", np.array(
+            [[0, 1, 0],
+             [1, 0, 0],
+             [0, 0, 0]]), True],
+        ["003", np.array(
+            [[0, 0, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), False],
+        ["120D", np.array(
+            [[0, 0, 1],
+             [1, 0, 1],
+             [1, 0, 0]]), False],
+        ["120U", np.array(
+            [[0, 1, 1],
+             [0, 0, 0],
+             [1, 1, 0]]), False],
+        ["030T", np.array(
+            [[0, 1, 1],
+             [0, 0, 1],
+             [0, 0, 0]]), False],
+        ["021D", np.array(
+            [[0, 0, 0],
+             [1, 0, 1],
+             [0, 0, 0]]), False],
+        ["021U", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, 1, 0]]), False],
+        ["012", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), False],
+        ["021C", np.array(
+            [[0, 1, 0],
+             [0, 0, 1],
+             [0, 0, 0]]), False],
+        ["111U", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [0, 0, 0]]), False],
+        ["111D", np.array(
+            [[0, 1, 0],
+             [1, 0, 0],
+             [0, 1, 0]]), False],
+        ["030C", np.array(
+            [[0, 1, 0],
+             [0, 0, 1],
+             [1, 0, 0]]), False],
+        ["201", np.array(
+            [[0, 1, 1],
+             [1, 0, 0],
+             [1, 0, 0]]), False],
+        ["120C", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [1, 0, 0]]), False],
+        ["210", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [1, 1, 0]]), False]]
+            )
+    def test_is_classically_balanced(
+            self, name, triad, expected_balance):
+        self.assertEqual(
+            network_utils.is_classically_balanced(triad),
+            expected_balance)
+
+    # =========================================================================
+    # =============== is_classical_clustering_balanced ========================
+    # =========================================================================
+    def test_is_classical_clustering_balanced_raises_when_self_loops(
+            self):
+        with self.assertRaises(ValueError):
+            triad_with_self_loop = np.array(
+                [[0, 1, 0],
+                 [0, 1, 1],
+                 [0, 0, 0]])
+            network_utils.is_classical_clustering_balanced(
+                triad_with_self_loop)
+
+    def test_is_classical_clustering_balanced_raises_when_negative(
+            self):
+        with self.assertRaises(ValueError):
+            triad_with_self_loop = np.array(
+                [[0, 1, 0],
+                 [0, 1, 1],
+                 [-1, 0, 0]])
+            network_utils.is_classical_clustering_balanced(
+                triad_with_self_loop)
+
+    @parameterized.expand([
+        ["300", np.array(
+            [[0, 1, 1],
+             [1, 0, 1],
+             [1, 1, 0]]), True],
+        ["102", np.array(
+            [[0, 1, 0],
+             [1, 0, 0],
+             [0, 0, 0]]), True],
+        ["003", np.array(
+            [[0, 0, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), True],
+        ["120D", np.array(
+            [[0, 0, 1],
+             [1, 0, 1],
+             [1, 0, 0]]), False],
+        ["120U", np.array(
+            [[0, 1, 1],
+             [0, 0, 0],
+             [1, 1, 0]]), False],
+        ["030T", np.array(
+            [[0, 1, 1],
+             [0, 0, 1],
+             [0, 0, 0]]), False],
+        ["021D", np.array(
+            [[0, 0, 0],
+             [1, 0, 1],
+             [0, 0, 0]]), False],
+        ["021U", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, 1, 0]]), False],
+        ["012", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), True],
+        ["021C", np.array(
+            [[0, 1, 0],
+             [0, 0, 1],
+             [0, 0, 0]]), False],
+        ["111U", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [0, 0, 0]]), False],
+        ["111D", np.array(
+            [[0, 1, 0],
+             [1, 0, 0],
+             [0, 1, 0]]), False],
+        ["030C", np.array(
+            [[0, 1, 0],
+             [0, 0, 1],
+             [1, 0, 0]]), False],
+        ["201", np.array(
+            [[0, 1, 1],
+             [1, 0, 0],
+             [1, 0, 0]]), False],
+        ["120C", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [1, 0, 0]]), False],
+        ["210", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [1, 1, 0]]), False]]
+            )
+    def test_is_classical_clustering_balanced(
+            self, name, triad, expected_balance):
+        self.assertEqual(
+            network_utils.is_classical_clustering_balanced(triad),
+            expected_balance)
+
+    # =========================================================================
+    # ================== is_classical_transitivity_balanced ===================
+    # =========================================================================
+    def test_is_classical_transitivity_balanced_raises_when_self_loops(
+            self):
+        with self.assertRaises(ValueError):
+            triad_with_self_loop = np.array(
+                [[0, 1, 0],
+                 [0, 1, 1],
+                 [0, 0, 0]])
+            network_utils.is_classical_transitivity_balanced(
+                triad_with_self_loop)
+
+    def test_is_classical_transitivity_balanced_raises_when_negative(
+            self):
+        with self.assertRaises(ValueError):
+            triad_with_self_loop = np.array(
+                [[0, 1, 0],
+                 [0, 1, 1],
+                 [-1, 0, 0]])
+            network_utils.is_classical_transitivity_balanced(
+                triad_with_self_loop)
+
+    @parameterized.expand([
+        ["300", np.array(
+            [[0, 1, 1],
+             [1, 0, 1],
+             [1, 1, 0]]), True],
+        ["102", np.array(
+            [[0, 1, 0],
+             [1, 0, 0],
+             [0, 0, 0]]), True],
+        ["003", np.array(
+            [[0, 0, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), True],
+        ["120D", np.array(
+            [[0, 0, 1],
+             [1, 0, 1],
+             [1, 0, 0]]), True],
+        ["120U", np.array(
+            [[0, 1, 1],
+             [0, 0, 0],
+             [1, 1, 0]]), True],
+        ["030T", np.array(
+            [[0, 1, 1],
+             [0, 0, 1],
+             [0, 0, 0]]), True],
+        ["021D", np.array(
+            [[0, 0, 0],
+             [1, 0, 1],
+             [0, 0, 0]]), True],
+        ["021U", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, 1, 0]]), True],
+        ["012", np.array(
+            [[0, 1, 0],
+             [0, 0, 0],
+             [0, 0, 0]]), True],
+        ["021C", np.array(
+            [[0, 1, 0],
+             [0, 0, 1],
+             [0, 0, 0]]), False],
+        ["111U", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [0, 0, 0]]), False],
+        ["111D", np.array(
+            [[0, 1, 0],
+             [1, 0, 0],
+             [0, 1, 0]]), False],
+        ["030C", np.array(
+            [[0, 1, 0],
+             [0, 0, 1],
+             [1, 0, 0]]), False],
+        ["201", np.array(
+            [[0, 1, 1],
+             [1, 0, 0],
+             [1, 0, 0]]), False],
+        ["120C", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [1, 0, 0]]), False],
+        ["210", np.array(
+            [[0, 1, 0],
+             [1, 0, 1],
+             [1, 1, 0]]), False]]
+            )
+    def test_is_classical_transitivity_balanced(
+            self, name, triad, expected_balance):
+        self.assertEqual(
+            network_utils.is_classical_transitivity_balanced(triad),
             expected_balance)
 
     # # =========================================================================
