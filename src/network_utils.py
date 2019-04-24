@@ -494,13 +494,13 @@ def cartwright_harary_balance_ratio(dgraph: nx.DiGraph) -> float:
 
 
 # @enforce.runtime_validation
-def classical_balance_ratio(
+def fullyconnected_balance_ratio(
         dgraph: nx.DiGraph,
         balance_type: int = 1) -> Tuple[float, int, int]:
     """Computes the ratio of classical balance for all triads.
 
-       Parameter balance_type could take 1, 2, or 3. 1 is Cartwright & Harary,
-       2 is Clusering, and 3 is Transitivity.
+       Parameter balance_type could take 1, 2, or 3.
+       1 is Cartwright & Harary, 2 is Clusering, and 3 is Transitivity.
 
     Args:
         dgraph: Given directed graph with 0 and +1.

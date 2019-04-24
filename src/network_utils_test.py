@@ -285,21 +285,22 @@ class MyTestClass(unittest.TestCase):
             computed, expected_values, decimal=2)
 
     # =========================================================================
-    # ======================= classical_balance_ratio =========================
+    # ======================= fullyconnected_balance_ratio ====================
     # =========================================================================
-    def test_classical_balance_ratio_raises_when_incorrect_balance_type(self):
+    def test_fullyconnected_balance_ratio_raises_when_incorrect_balance_type(
+            self):
         with self.assertRaises(ValueError):
-            network_utils.classical_balance_ratio(
+            network_utils.fullyconnected_balance_ratio(
                 dgraph=nx.DiGraph(),
                 balance_type=0)
 
-    def test_classical_balance_ratio_raises_when_negative_in_dgraph(self):
+    def test_fullyconnected_balance_ratio_raises_when_negative_in_dgraph(self):
         with self.assertRaises(ValueError):
             dg = nx.DiGraph()
             dg.add_nodes_from([1, 2])
             dg.add_edge(1, 2, weight=1)
             dg.add_edge(2, 1, weight=-1)
-            network_utils.classical_balance_ratio(
+            network_utils.fullyconnected_balance_ratio(
                 dgraph=dg,
                 balance_type=1)
 
@@ -307,7 +308,7 @@ class MyTestClass(unittest.TestCase):
         ['Classical', 1, [0.4, 4, 6]],
         ['Clustering', 2, [0.7, 7, 3]],
         ['Transitivity', 3, [0.8, 8, 2]]])
-    def test_classical_balance_ratio(
+    def test_fullyconnected_balance_ratio(
             self,
             name,
             balance_type,
@@ -322,7 +323,7 @@ class MyTestClass(unittest.TestCase):
         dg.add_edge(2, 5, weight=1)
         dg.add_edge(5, 3, weight=1)
         dg.add_edge(2, 3, weight=1)
-        computed = network_utils.classical_balance_ratio(
+        computed = network_utils.fullyconnected_balance_ratio(
             dgraph=dg,
             balance_type=balance_type)
         np.testing.assert_array_almost_equal(
