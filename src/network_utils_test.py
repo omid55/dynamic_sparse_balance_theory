@@ -907,26 +907,26 @@ class MyTestClass(unittest.TestCase):
             expected_balance)
 
     # =========================================================================
-    # =================== is_classically_balanced =============================
+    # ========= is_fullyconnected_cartwright_harary_balance ===================
     # =========================================================================
-    def test_is_classically_balanced_raises_when_self_loops(
+    def test_is_fullyconnected_cartwright_harary_balance_raises_when_selfloops(
             self):
         with self.assertRaises(ValueError):
             triad_with_self_loop = np.array(
                 [[0, 1, 0],
                  [0, 1, 1],
                  [0, 0, 0]])
-            network_utils.is_classically_balanced(
+            network_utils.is_fullyconnected_cartwright_harary_balance(
                 triad_with_self_loop)
 
-    def test_is_classically_balanced_raises_when_negative(
+    def test_is_fullyconnected_cartwright_harary_balance_raises_when_negative(
             self):
         with self.assertRaises(ValueError):
             triad_with_self_loop = np.array(
                 [[0, 1, 0],
                  [0, 1, 1],
                  [-1, 0, 0]])
-            network_utils.is_classically_balanced(
+            network_utils.is_fullyconnected_cartwright_harary_balance(
                 triad_with_self_loop)
 
     @parameterized.expand([
@@ -995,33 +995,33 @@ class MyTestClass(unittest.TestCase):
              [1, 0, 1],
              [1, 1, 0]]), False]]
             )
-    def test_is_classically_balanced(
+    def test_is_fullyconnected_cartwright_harary_balance(
             self, name, triad, expected_balance):
         self.assertEqual(
-            network_utils.is_classically_balanced(triad),
+            network_utils.is_fullyconnected_cartwright_harary_balance(triad),
             expected_balance)
 
     # =========================================================================
-    # =============== is_classical_clustering_balanced ========================
+    # =============== is_fullyconnected_clustering_balanced ===================
     # =========================================================================
-    def test_is_classical_clustering_balanced_raises_when_self_loops(
+    def test_is_fullyconnected_clustering_balanced_raises_when_self_loops(
             self):
         with self.assertRaises(ValueError):
             triad_with_self_loop = np.array(
                 [[0, 1, 0],
                  [0, 1, 1],
                  [0, 0, 0]])
-            network_utils.is_classical_clustering_balanced(
+            network_utils.is_fullyconnected_clustering_balanced(
                 triad_with_self_loop)
 
-    def test_is_classical_clustering_balanced_raises_when_negative(
+    def test_is_fullyconnected_clustering_balanced_raises_when_negative(
             self):
         with self.assertRaises(ValueError):
             triad_with_self_loop = np.array(
                 [[0, 1, 0],
                  [0, 1, 1],
                  [-1, 0, 0]])
-            network_utils.is_classical_clustering_balanced(
+            network_utils.is_fullyconnected_clustering_balanced(
                 triad_with_self_loop)
 
     @parameterized.expand([
@@ -1090,33 +1090,33 @@ class MyTestClass(unittest.TestCase):
              [1, 0, 1],
              [1, 1, 0]]), False]]
             )
-    def test_is_classical_clustering_balanced(
+    def test_is_fullyconnected_clustering_balanced(
             self, name, triad, expected_balance):
         self.assertEqual(
-            network_utils.is_classical_clustering_balanced(triad),
+            network_utils.is_fullyconnected_clustering_balanced(triad),
             expected_balance)
 
     # =========================================================================
-    # ================== is_classical_transitivity_balanced ===================
+    # ============= is_fullyconnected_transitivity_balanced ===================
     # =========================================================================
-    def test_is_classical_transitivity_balanced_raises_when_self_loops(
+    def test_is_fullyconnected_transitivity_balanced_raises_when_self_loops(
             self):
         with self.assertRaises(ValueError):
             triad_with_self_loop = np.array(
                 [[0, 1, 0],
                  [0, 1, 1],
                  [0, 0, 0]])
-            network_utils.is_classical_transitivity_balanced(
+            network_utils.is_fullyconnected_transitivity_balanced(
                 triad_with_self_loop)
 
-    def test_is_classical_transitivity_balanced_raises_when_negative(
+    def test_is_fullyconnected_transitivity_balanced_raises_when_negative(
             self):
         with self.assertRaises(ValueError):
             triad_with_self_loop = np.array(
                 [[0, 1, 0],
                  [0, 1, 1],
                  [-1, 0, 0]])
-            network_utils.is_classical_transitivity_balanced(
+            network_utils.is_fullyconnected_transitivity_balanced(
                 triad_with_self_loop)
 
     @parameterized.expand([
@@ -1185,15 +1185,15 @@ class MyTestClass(unittest.TestCase):
              [1, 0, 1],
              [1, 1, 0]]), False]]
             )
-    def test_is_classical_transitivity_balanced(
+    def test_is_fullyconnected_transitivity_balanced(
             self, name, triad, expected_balance):
         self.assertEqual(
-            network_utils.is_classical_transitivity_balanced(triad),
+            network_utils.is_fullyconnected_transitivity_balanced(triad),
             expected_balance)
 
-    # # =========================================================================
-    # # ===================== is_sparsely_ranked_clustering_balanced ============
-    # # =========================================================================
+    # # =======================================================================
+    # # =================== is_sparsely_ranked_clustering_balanced ============
+    # # =======================================================================
     # def test_is_sparsely_ranked_clustering_balanced_raises_when_self_loops(
     #         self):
     #     with self.assertRaises(ValueError):

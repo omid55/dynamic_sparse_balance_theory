@@ -537,17 +537,18 @@ def fullyconnected_balance_ratio(
         triad_subgraph_matrix = utils.sub_adjacency_matrix(
             adj_matrix, list(triad))
         if balance_type == 1:
-            if is_classically_balanced(triad_subgraph_matrix):
+            if is_fullyconnected_cartwright_harary_balance(
+                    triad_subgraph_matrix):
                 balanced_triads += 1
             else:
                 unbalanced_triads += 1
         elif balance_type == 2:
-            if is_classical_clustering_balanced(triad_subgraph_matrix):
+            if is_fullyconnected_clustering_balanced(triad_subgraph_matrix):
                 balanced_triads += 1
             else:
                 unbalanced_triads += 1
         elif balance_type == 3:
-            if is_classical_transitivity_balanced(triad_subgraph_matrix):
+            if is_fullyconnected_transitivity_balanced(triad_subgraph_matrix):
                 balanced_triads += 1
             else:
                 unbalanced_triads += 1
@@ -808,6 +809,83 @@ def compute_vanderijt_edge_balance(
 
 
 # @enforce.runtime_validation
+def is_sparsely_cartwright_harary_balanced(
+        triad: np.ndarray,
+        everyone_aware_of_others: bool=True) -> bool:
+    """Checks whether input triad matrix is balanced or not w.r.t. C & H.
+
+    Cartwright and Harary balance is defined on multiplication of every 3 edge
+    to be always positive. In the case of sparsity, whether two edge exist,
+    the third edge should also exist. If only one exist the third is not
+    required.
+    This also is aligned with Kulakowski (2005) paper because:
+    dr(i, j) / dt = sum_k r(i, k) * r(k, j)
+
+    Args:
+        triad: Input triad matrix.
+
+        everyone_aware_of_others: Is everyone aware of others or not.
+
+    Returns:
+        Boolean result whether triad is transitively balanced or not.
+
+    Raises:
+        ValueError: If there is a self loop in the given triad or triad was not
+        3 * 3.
+    """
+    n, m = triad.shape
+    if n != 3 or m != 3:
+        raise ValueError('Triad has unexpected shape.')
+    for i in range(n):
+        if triad[i, i]:
+            raise ValueError('There is a self loop in given triad: {}.'.format(
+                triad))
+    for (i, j, k) in list(itertools.permutations([0, 1, 2])):
+        if everyone_aware_of_others or abs(triad[i, j]):
+            if (abs(triad[i, k]) and abs(triad[k, j])
+                    and (triad[i, j] != triad[i, k] * triad[k, j])):
+                return False
+    return True
+
+
+# @enforce.runtime_validation
+def is_sparsely_clustering_balanced(
+        triad: np.ndarray,
+        everyone_aware_of_others: bool=True) -> bool:
+    """Checks whether input triad matrix is clustering balance (Davis 1967).
+
+    x_{ij} sim x_{ik}x_{kj}, \text{for} k \neq i, j\\
+        \text{and} (x_{ik} > 0 \text{or} x_{kj} > 0)
+
+    Args:
+        triad: Input triad matrix.
+
+        everyone_aware_of_others: Is everyone aware of others or not.
+
+    Returns:
+        Boolean result whether triad is clustering balanced or not.
+
+    Raises:
+        ValueError: If there is a self loop in the given triad or triad was not
+        3 * 3.
+    """
+    n, m = triad.shape
+    if n != 3 or m != 3:
+        raise ValueError('Triad has unexpected shape.')
+    for i in range(n):
+        if triad[i, i]:
+            raise ValueError('There is a self loop in given triad: {}.'.format(
+                triad))
+    for (i, j, k) in list(itertools.permutations([0, 1, 2])):
+        if everyone_aware_of_others or abs(triad[i, j]):
+            if ((abs(triad[i, k]) and abs(triad[k, j]))
+                and (triad[i, k] > 0 or triad[k, j] > 0)
+                    and (triad[i, j] != triad[i, k] * triad[k, j])):
+                return False
+    return True
+
+
+# @enforce.runtime_validation
 def is_sparsely_transitive_balanced(
         triad: np.ndarray,
         everyone_aware_of_others: bool=True) -> bool:
@@ -848,84 +926,7 @@ def is_sparsely_transitive_balanced(
         if everyone_aware_of_others or abs(triad[i, j]):
             if ((abs(triad[i, k]) and abs(triad[k, j]))
                 and (triad[i, k] > 0 and triad[k, j] > 0)
-                    and (triad[i, j] != triad[i, k]*triad[k, j])):
-                return False
-    return True
-
-
-# @enforce.runtime_validation
-def is_sparsely_cartwright_harary_balanced(
-        triad: np.ndarray,
-        everyone_aware_of_others: bool=True) -> bool:
-    """Checks whether input triad matrix is balanced or not w.r.t. C & H.
-
-    Cartwright and Harary balance is defined on multiplication of every 3 edge
-    to be always positive. In the case of sparsity, whether two edge exist,
-    the third edge should also exist. If only one exist the third is not
-    required.
-    This also is aligned with Kulakowski (2005) paper because:
-    dr(i, j) / dt = sum_k r(i, k) * r(k, j)
-
-    Args:
-        triad: Input triad matrix.
-
-        everyone_aware_of_others: Is everyone aware of others or not.
-
-    Returns:
-        Boolean result whether triad is transitively balanced or not.
-
-    Raises:
-        ValueError: If there is a self loop in the given triad or triad was not
-        3 * 3.
-    """
-    n, m = triad.shape
-    if n != 3 or m != 3:
-        raise ValueError('Triad has unexpected shape.')
-    for i in range(n):
-        if triad[i, i]:
-            raise ValueError('There is a self loop in given triad: {}.'.format(
-                triad))
-    for (i, j, k) in list(itertools.permutations([0, 1, 2])):
-        if everyone_aware_of_others or abs(triad[i, j]):
-            if (abs(triad[i, k]) and abs(triad[k, j])
-                    and (triad[i, j] != triad[i, k]*triad[k, j])):
-                return False
-    return True
-
-
-# @enforce.runtime_validation
-def is_sparsely_clustering_balanced(
-        triad: np.ndarray,
-        everyone_aware_of_others: bool=True) -> bool:
-    """Checks whether input triad matrix is clustering balance (Davis 1967).
-
-    x_{ij} sim x_{ik}x_{kj}, \text{for} k \neq i, j\\
-        \text{and} (x_{ik} > 0 \text{or} x_{kj} > 0)
-
-    Args:
-        triad: Input triad matrix.
-
-        everyone_aware_of_others: Is everyone aware of others or not.
-
-    Returns:
-        Boolean result whether triad is clustering balanced or not.
-
-    Raises:
-        ValueError: If there is a self loop in the given triad or triad was not
-        3 * 3.
-    """
-    n, m = triad.shape
-    if n != 3 or m != 3:
-        raise ValueError('Triad has unexpected shape.')
-    for i in range(n):
-        if triad[i, i]:
-            raise ValueError('There is a self loop in given triad: {}.'.format(
-                triad))
-    for (i, j, k) in list(itertools.permutations([0, 1, 2])):
-        if everyone_aware_of_others or abs(triad[i, j]):
-            if ((abs(triad[i, k]) and abs(triad[k, j]))
-                and (triad[i, k] > 0 or triad[k, j] > 0)
-                    and (triad[i, j] != triad[i, k]*triad[k, j])):
+                    and (triad[i, j] != triad[i, k] * triad[k, j])):
                 return False
     return True
 
@@ -967,8 +968,9 @@ def is_sparsely_clustering_balanced(
 
 
 # @enforce.runtime_validation
-def is_classically_balanced(triad: np.ndarray) -> bool:
+def is_fullyconnected_cartwright_harary_balance(triad: np.ndarray) -> bool:
     """Checks whether the fully connected input triad is classically balanced.
+    With the definition of Cartwright and Harary.
 
     Args:
         triad: Input triad matrix with only 0 and 1.
@@ -1001,7 +1003,7 @@ def is_classically_balanced(triad: np.ndarray) -> bool:
 
 
 # @enforce.runtime_validation
-def is_classical_clustering_balanced(triad: np.ndarray) -> bool:
+def is_fullyconnected_clustering_balanced(triad: np.ndarray) -> bool:
     """Checks whether the fully connected input triad is clustering balanced.
 
     Args:
@@ -1037,7 +1039,7 @@ def is_classical_clustering_balanced(triad: np.ndarray) -> bool:
 
 
 # @enforce.runtime_validation
-def is_classical_transitivity_balanced(triad: np.ndarray) -> bool:
+def is_fullyconnected_transitivity_balanced(triad: np.ndarray) -> bool:
     """Checks whether the fully connected input triad is transivitiy balanced.
 
     Args:
