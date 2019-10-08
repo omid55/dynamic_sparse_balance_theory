@@ -1213,7 +1213,8 @@ def _detect_triad_type_for_all_subgraph3(
     adj_matrix[adj_matrix > 0] = 1
     adj_matrix[adj_matrix < 0] = -1
     triads = list(itertools.combinations(range(len(nodes_list)), 3))
-    for triad in triads:
+    for index in tqdm(range(len(triads))):
+        triad = triads[index]
         triad_subgraph_matrix = utils.sub_adjacency_matrix(
             adj_matrix, list(triad))
         triad_subgraph_key = str(np.array(triad_subgraph_matrix, dtype=int))
@@ -1240,7 +1241,7 @@ def compute_transition_matrix(
         sparse_triads: bool = True,
         verbose: bool = False) -> Dict[
                                     str, Union[List[np.ndarray], List[Dict]]]:
-    """Computes transition matrix and triads count for every consequetive graph.
+    """Computes transition matrix and triads count for every consecutive graph.
 
     Args:
         dgraphs: List of graphs in timely order.
@@ -1272,12 +1273,14 @@ def compute_transition_matrix(
         unique_triad_num = len(triad_list)
 
     # Detects the sparse triad types of all networks.
-    triads_types = [_detect_triad_type_for_all_subgraph3(
-            dgraph=dgraph,
-            triad_map=triad_map,
-            sparse_triads=sparse_triads,
-            verbose=verbose)
-            for dgraph in dgraphs]
+    triads_types = []
+    for index in tqdm(range(len(dgraphs))):
+        triads_types.append(
+            _detect_triad_type_for_all_subgraph3(
+                dgraph=dgraphs[index],
+                triad_map=triad_map,
+                sparse_triads=sparse_triads,
+                verbose=verbose))
 
     transition_matrices = []
     for index in tqdm(range(len(dgraphs)-1)):
