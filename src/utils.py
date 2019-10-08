@@ -146,7 +146,9 @@ def swap_nodes_in_matrix(
 
 
 # @enforce.runtime_validation
-def make_matrix_row_stochastic(matrix: np.ndarray) -> np.ndarray:
+def make_matrix_row_stochastic(
+        matrix: np.ndarray,
+        eps: float = 0) -> np.ndarray:
     """Makes the matrix row-stochastic (sum of each row is 1)
 
     Args:
@@ -158,6 +160,7 @@ def make_matrix_row_stochastic(matrix: np.ndarray) -> np.ndarray:
     Raises:
         None.
     """
+    matrix += eps
     return np.nan_to_num(matrix.T / np.sum(matrix, axis=1)).T
 
 
@@ -512,3 +515,40 @@ def plot_box_plot_for_transitions(
     # If filename is given then saves the file.
     if fname:
         f.savefig(fname+'.pdf', bbox_inches='tight')
+
+
+def draw_from_empirical_distribution(
+    data_points: np.ndarray,
+    nbins: int = 10) -> float:
+    """Draws a sample from the empricial distribution of the given data points.
+
+    Args:
+        data_points: Array of one dimensional data points.
+
+        nbins: Number of bins to consider for empirical distribution.
+
+    Returns:
+        A drawn sample from the same emprical distribution of data points.
+
+    Raises:
+        ValueError: When nbins is not positive.
+            Also when the number of data_points is less than nbins.
+    """
+    if nbins <= 0:
+        raise ValueError('Number of bins should be positive. '
+                         'It was {}.'.format(nbins))
+    if len(data_points) < nbins:
+        raise ValueError('Number of data points should be more than '
+                         'number of bins. '
+                         '#data points = {}, #bins = {}.'.format(
+                             len(data_points), nbins))
+    if not data_points:
+        raise ValueError('Data points is empty.')
+    bin_volume, bin_edges = np.histogram(data_points, bins=nbins)
+    probability = bin_volume / np.sum(bin_volume)
+    selected_bin_index = np.random.choice(range(nbins), 1, p=probability)
+    drawn_sample = np.random.uniform(
+        low=bin_edges[selected_bin_index],
+        high=bin_edges[selected_bin_index + 1],
+        size=1)[0]
+    return drawn_sample

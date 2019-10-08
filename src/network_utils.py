@@ -7,9 +7,7 @@
 # Dynamic networks and specificly structural balance theory utility module.
 ###############################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import division, print_function, absolute_import, unicode_literals
 
 import itertools
 import datetime
@@ -26,6 +24,7 @@ from typing import List
 from typing import Union
 from typing import Set
 from typing import Tuple
+from tqdm import tqdm
 
 import utils
 
@@ -1281,7 +1280,7 @@ def compute_transition_matrix(
             for dgraph in dgraphs]
 
     transition_matrices = []
-    for index in range(len(dgraphs)-1):
+    for index in tqdm(range(len(dgraphs)-1)):
         triads_type1 = triads_types[index]        # First graph.
         triads_type2 = triads_types[index + 1]    # Subsequent graph.
 

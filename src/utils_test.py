@@ -274,6 +274,31 @@ class MyTestClass(unittest.TestCase):
         os.remove(file_path)
         self.assertEqual(a, b)
 
+    # =========================================================================
+    # ================= draw_from_empirical_distribution ======================
+    # =========================================================================
+    def test_draw_from_empirical_distribution_raises_when_not_positive_nbins(self):
+        with self.assertRaises(ValueError):
+            utils.draw_from_empirical_distribution(
+                [1, 2, 3], nbins=-2)
+
+    def test_draw_from_empirical_distribution_raises_when_too_many_nbins(self):
+        with self.assertRaises(ValueError):
+            utils.draw_from_empirical_distribution(
+                data_points=[1, 2, 3], nbins=4)
+
+    def test_draw_from_empirical_distribution_raises_when_empty_data_points(self):
+        with self.assertRaises(ValueError):
+            utils.draw_from_empirical_distribution(
+                data_points=[], nbins=2)
+    
+    def test_draw_from_empirical_distribution(self):
+        expected = 2
+        computed = utils.draw_from_empirical_distribution(
+            data_points=[2, 2, 2, 2, 2],
+            nbins=1)
+        self.assertEqual(expected, np.round(computed))
+
 
 if __name__ == '__main__':
     unittest.main()
