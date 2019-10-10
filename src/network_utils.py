@@ -1215,7 +1215,9 @@ def _detect_triad_type_for_all_subgraph3(
     # triads = list(itertools.combinations(range(len(nodes_list)), 3))
     # for index in tqdm(range(len(triads))):
     for i in range(len(nodes_list)-2):
+        print('i: ', i)
         for j in range(i+1, len(nodes_list)-1):
+            print('j: ', j)
             for k in range(j+1, len(nodes_list)):
                 # triad = triads[index]
                 triad = [i, j, k]
