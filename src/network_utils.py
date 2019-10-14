@@ -24,7 +24,6 @@ from typing import List
 from typing import Union
 from typing import Set
 from typing import Tuple
-from tqdm import tqdm
 
 import utils
 
@@ -1212,30 +1211,23 @@ def _detect_triad_type_for_all_subgraph3(
     adj_matrix = utils.dgraph2adjacency(dgraph)
     adj_matrix[adj_matrix > 0] = 1
     adj_matrix[adj_matrix < 0] = -1
-    # triads = list(itertools.combinations(range(len(nodes_list)), 3))
-    # for index in tqdm(range(len(triads))):
-    for i in range(len(nodes_list)-2):
-        print('i: ', i)
-        for j in range(i+1, len(nodes_list)-1):
-            print('j: ', j)
-            for k in range(j+1, len(nodes_list)):
-                # triad = triads[index]
-                triad = [i, j, k]
-                triad_subgraph_matrix = utils.sub_adjacency_matrix(
-                    adj_matrix, list(triad))
-                triad_subgraph_key = str(np.array(triad_subgraph_matrix, dtype=int))
-                if triad_subgraph_key not in triad_map:
-                    print(triad, 'is not found.')
-                    print('Their names are:', nodes_list[np.array(triad)])
-                    print('Simplified subgraph was:', triad_subgraph_matrix)
-                else:
-                    triad_type_index = triad_map[triad_subgraph_key]
-                    # It is imported to sort the key name unless final dictionary
-                    #   might have non-unique keys.
-                    subgraph2triad_type[str(tuple(
-                        sorted(nodes_list[np.array(triad)])))] = triad_type_index
-            if verbose:
-                print('.', end='')
+    triads = list(itertools.combinations(range(len(nodes_list)), 3))
+    for triad in triads:
+        triad_subgraph_matrix = utils.sub_adjacency_matrix(
+            adj_matrix, list(triad))
+        triad_subgraph_key = str(np.array(triad_subgraph_matrix, dtype=int))
+        if triad_subgraph_key not in triad_map:
+            print(triad, 'is not found.')
+            print('Their names are:', nodes_list[np.array(triad)])
+            print('Simplified subgraph was:', triad_subgraph_matrix)
+        else:
+            triad_type_index = triad_map[triad_subgraph_key]
+            # It is imported to sort the key name unless final dictionary
+            #   might have non-unique keys.
+            subgraph2triad_type[str(tuple(
+                sorted(nodes_list[np.array(triad)])))] = triad_type_index
+    if verbose:
+        print('.', end='')
     return subgraph2triad_type
 
 
@@ -1247,7 +1239,7 @@ def compute_transition_matrix(
         sparse_triads: bool = True,
         verbose: bool = False) -> Dict[
                                     str, Union[List[np.ndarray], List[Dict]]]:
-    """Computes transition matrix and triads count for every consecutive graph.
+    """Computes transition matrix and triads count for every consequetive graph.
 
     Args:
         dgraphs: List of graphs in timely order.
@@ -1279,14 +1271,12 @@ def compute_transition_matrix(
         unique_triad_num = len(triad_list)
 
     # Detects the sparse triad types of all networks.
-    triads_types = []
-    for index in tqdm(range(len(dgraphs))):
-        triads_types.append(
-            _detect_triad_type_for_all_subgraph3(
-                dgraph=dgraphs[index],
-                triad_map=triad_map,
-                sparse_triads=sparse_triads,
-                verbose=verbose))
+    triads_types = [_detect_triad_type_for_all_subgraph3(
+            dgraph=dgraph,
+            triad_map=triad_map,
+            sparse_triads=sparse_triads,
+            verbose=verbose)
+            for dgraph in dgraphs]
 
     transition_matrices = []
     for index in range(len(dgraphs)-1):
