@@ -1,0 +1,12 @@
+core triads:  [1, 2, 3, 7, 8, 10, 15, 43, 45, 123]
+
+When everyone is aware of others and have feeling/interpersonal relationship:
+	24 C&H balance and 114 non C&H balance.
+	44 clustering balance and 94 non clustering balance.
+	93 transitive and 45 nontransitive.
+
+When everyone is not aware of others and do not have feeling/interpersonal relationship:
+	70 C&H balance and 68 non C&H balance.
+	85 clustering balance and 53 non clustering balance.
+	113 transitive and 25 nontransitive.
+
