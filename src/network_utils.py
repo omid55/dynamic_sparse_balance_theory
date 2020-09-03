@@ -563,7 +563,7 @@ def sprase_balance_ratio(
     """Computes the ratio of sparse balance for all triads.
 
        Parameter balance_type could take 1, 2, or 3. 1 is Cartwright & Harary,
-       2 is Clusering, and 3 is Transitivity.
+       2 is Clustering, and 3 is Transitivity.
 
     Args:
         dgraph: Given directed graph with 0, +1 and -1.

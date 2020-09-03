@@ -147,8 +147,7 @@ def swap_nodes_in_matrix(
 
 # @enforce.runtime_validation
 def make_matrix_row_stochastic(
-        matrix: np.ndarray,
-        eps: float = 0) -> np.ndarray:
+        matrix: np.ndarray) -> np.ndarray:
     """Makes the matrix row-stochastic (sum of each row is 1)
 
     Args:
@@ -160,7 +159,16 @@ def make_matrix_row_stochastic(
     Raises:
         None.
     """
-    matrix += eps
+    # matrix += eps
+    # return np.nan_to_num(matrix.T / np.sum(matrix, axis=1)).T
+    matrix = np.array(matrix)  # To make sure it is numpy array and not matrix.
+    n, _ = matrix.shape
+    for i in range(n):
+        row_pointer = matrix[i, :]
+        if any(row_pointer < 0):
+            row_pointer -= np.min(row_pointer)
+        if np.sum(row_pointer) == 0:
+            row_pointer += 0.01
     return np.nan_to_num(matrix.T / np.sum(matrix, axis=1)).T
 
 
@@ -480,10 +488,10 @@ def plot_box_plot_for_transitions(
     labels = None
     if with_labels:
         labels = (
-            ['balanced -> balanced',
-             'unbalanced -> balanced',
-             'unbalanced -> unbalanced',
-             'balanced -> unbalanced'])
+            [r'balanced $\rightarrow$ balanced',
+             r'unbalanced $\rightarrow$ balanced',
+             r'unbalanced $\rightarrow$ unbalanced',
+             r'balanced $\rightarrow$ unbalanced'])
     f = plt.figure()
     bp = plt.boxplot(
         [np.array(probs1),
@@ -493,6 +501,7 @@ def plot_box_plot_for_transitions(
         labels=labels,
         vert=False,
         showfliers=False)
+    plt.xlabel('Transition proability')
     # Default values:
     #   whis=1.5
     if ftitle:
@@ -514,7 +523,8 @@ def plot_box_plot_for_transitions(
 
     # If filename is given then saves the file.
     if fname:
-        f.savefig(fname+'.pdf', bbox_inches='tight')
+        f.savefig('Figures/' + fname+'.pdf', bbox_inches='tight')
+        f.savefig('Figures/' + fname+'.png', bbox_inches='tight')
 
 
 def draw_from_empirical_distribution(
